@@ -1,4 +1,4 @@
-package main
+package libraData
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 func Test_Main(t *testing.T) {
 	t.Run("test", func(t *testing.T) {
-		main()
+		libraData()
 	})
 
 }
