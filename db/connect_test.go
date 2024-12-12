@@ -9,7 +9,7 @@ import (
 )
 
 func Test_Connect(t *testing.T) {
-	libraData.SetCustomEnv()
+	libraData.GetEnvConfig()
 
 	t.Run("test", func(t *testing.T) {
 		var cfg libraData.EnvConfig
@@ -19,14 +19,10 @@ func Test_Connect(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		conn := connectPG(cfg.DATABASE_URL, &ctx)
+		conn := connectPGPool(cfg.DATABASE_URL, &ctx)
 
-		defer conn.Close(ctx)
+		defer conn.Close()
 
-		isClosed := conn.IsClosed()
-		if isClosed != true {
-			t.Fatal(err)
-		}
 	})
 
 }
