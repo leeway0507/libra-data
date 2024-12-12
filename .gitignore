@@ -28,5 +28,5 @@ config.go
 */.DS_Store
 .DS_Store
 
-
+/config
 /data

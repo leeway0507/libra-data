@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData"
 	sqlc "libraData/db/sqlc"
+	"libraData/utils"
 	"os"
 	"strconv"
 	"time"
@@ -86,7 +86,7 @@ func InsertLibBookBulkFromCSV(conn *sqlc.Queries, ctx context.Context, csvPath s
 
 func InsertLibInfoBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
 	var rawData []map[string]string
-	file, err := libraData.LoadFile(jsonPath)
+	file, err := utils.LoadFile(jsonPath)
 
 	if err != nil {
 		return err

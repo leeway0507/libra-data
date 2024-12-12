@@ -1,8 +1,9 @@
-package libraData
+package preprocess
 
 import (
 	"encoding/json"
 	"libraData/model"
+	"libraData/utils"
 	"os"
 	"strconv"
 	"strings"
@@ -10,7 +11,7 @@ import (
 
 func ChangeLibInfoDataType(path string) error {
 	var rawData []map[string]string
-	file, err := LoadFile(path)
+	file, err := utils.LoadFile(path)
 	if err != nil {
 		return err
 	}
