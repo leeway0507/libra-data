@@ -5,21 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/caarlos0/env/v11"
 	"github.com/jackc/pgx/v5"
 )
 
-func init() {
-	SetCustomEnv()
-}
-
 func libraData() {
-	var cfg EnvConfig
-	err := env.Parse(&cfg)
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	cfg := GetEnvConfig()
 
 	fmt.Println("trying to connect to db : ", cfg)
 	conn, err := pgx.Connect(context.Background(), cfg.DATABASE_URL)
