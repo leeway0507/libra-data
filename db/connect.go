@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func connectPGPool(url string, ctx *context.Context) *pgxpool.Pool {
+func ConnectPGPool(url string, ctx *context.Context) *pgxpool.Pool {
 
 	fmt.Println("trying to connect to db : ", url)
 	config, err := pgxpool.ParseConfig(url)
@@ -28,7 +28,7 @@ func connectPGPool(url string, ctx *context.Context) *pgxpool.Pool {
 	return pool
 
 }
-func connectPG(url string, ctx context.Context) *pgx.Conn {
+func ConnectPG(url string, ctx context.Context) *pgx.Conn {
 
 	fmt.Println("trying to connect to db : ", url)
 	conn, err := pgx.Connect(ctx, url)
