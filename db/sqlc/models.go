@@ -9,19 +9,16 @@ import (
 )
 
 type Book struct {
-	ID               int32
-	Isbn             pgtype.Text
-	Title            pgtype.Text
-	Author           pgtype.Text
-	Publisher        pgtype.Text
-	Publicationyear  pgtype.Text
-	Setisbn          pgtype.Text
-	Additionalcode   pgtype.Text
-	Volume           pgtype.Text
-	Subjectcode      pgtype.Text
-	Bookcount        pgtype.Int4
-	Loancount        pgtype.Int4
-	Registrationdate pgtype.Date
+	ID              int32
+	Isbn            pgtype.Text
+	Title           pgtype.Text
+	Author          pgtype.Text
+	Publisher       pgtype.Text
+	Publicationyear pgtype.Text
+	Setisbn         pgtype.Text
+	Volume          pgtype.Text
+	Imageurl        pgtype.Text
+	Bookdescription pgtype.Text
 }
 
 type Library struct {
@@ -36,4 +33,14 @@ type Library struct {
 	Closed        pgtype.Text
 	Operatingtime pgtype.Text
 	Bookcount     pgtype.Int4
+}
+
+type Libsbook struct {
+	ID        int32
+	Libcode   pgtype.Int4
+	Isbn      pgtype.Text
+	Classnum  pgtype.Text
+	Bookcode  pgtype.Text
+	Shelfcode pgtype.Text
+	Shelfname pgtype.Text
 }

@@ -11,8 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteAllBooksRowForTest = `-- name: DeleteAllBooksRowForTest :one
+DELETE FROM Books RETURNING ID
+`
+
+func (q *Queries) DeleteAllBooksRowForTest(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, deleteAllBooksRowForTest)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const deleteAllLibariesForTest = `-- name: DeleteAllLibariesForTest :one
+DELETE FROM Libraries RETURNING ID
+`
+
+func (q *Queries) DeleteAllLibariesForTest(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, deleteAllLibariesForTest)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getBooks = `-- name: GetBooks :many
-SELECT id, isbn, title, author, publisher, publicationyear, setisbn, additionalcode, volume, subjectcode, bookcount, loancount, registrationdate FROM Books
+SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, bookdescription FROM Books
 `
 
 func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
@@ -32,12 +54,9 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 			&i.Publisher,
 			&i.Publicationyear,
 			&i.Setisbn,
-			&i.Additionalcode,
 			&i.Volume,
-			&i.Subjectcode,
-			&i.Bookcount,
-			&i.Loancount,
-			&i.Registrationdate,
+			&i.Imageurl,
+			&i.Bookdescription,
 		); err != nil {
 			return nil, err
 		}
@@ -49,19 +68,75 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 	return items, nil
 }
 
+const insertBooks = `-- name: InsertBooks :many
+INSERT INTO
+    Books (
+        ISBN,
+        Title,
+        Author,
+        Publisher,
+        PublicationYear,
+        SetISBN,
+        Volume,
+        ImageURL,
+        BookDescription
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9
+    )
+ON CONFLICT (ISBN) DO NOTHING
+RETURNING
+    ID
+`
+
 type InsertBooksParams struct {
-	Isbn             pgtype.Text
-	Title            pgtype.Text
-	Author           pgtype.Text
-	Publisher        pgtype.Text
-	Publicationyear  pgtype.Text
-	Setisbn          pgtype.Text
-	Additionalcode   pgtype.Text
-	Volume           pgtype.Text
-	Subjectcode      pgtype.Text
-	Bookcount        pgtype.Int4
-	Loancount        pgtype.Int4
-	Registrationdate pgtype.Date
+	Isbn            pgtype.Text
+	Title           pgtype.Text
+	Author          pgtype.Text
+	Publisher       pgtype.Text
+	Publicationyear pgtype.Text
+	Setisbn         pgtype.Text
+	Volume          pgtype.Text
+	Imageurl        pgtype.Text
+	Bookdescription pgtype.Text
+}
+
+func (q *Queries) InsertBooks(ctx context.Context, arg InsertBooksParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, insertBooks,
+		arg.Isbn,
+		arg.Title,
+		arg.Author,
+		arg.Publisher,
+		arg.Publicationyear,
+		arg.Setisbn,
+		arg.Volume,
+		arg.Imageurl,
+		arg.Bookdescription,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 type InsertLibrariesParams struct {
