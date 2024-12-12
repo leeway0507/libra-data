@@ -2,84 +2,57 @@ package db
 
 import (
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
+	"libraData/collection"
 	sqlc "libraData/db/sqlc"
 	"libraData/utils"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func InsertLibBookBulkFromCSV(conn *sqlc.Queries, ctx context.Context, csvPath string) error {
-	headerOrder := []string{"번호", "도서명", "저자", "출판사", "발행년도", "ISBN", "세트 ISBN", "부가기호", "권", "주제분류번호", "도서권수", "대출건수", "등록일자", ""}
-	f, err := os.Open(csvPath)
-
+func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
+	f, err := os.Open(jsonPath)
 	if err != nil {
 		return err
 	}
-	csvReader := csv.NewReader(f)
-	currHeaderOrder, _ := csvReader.Read() // remove header
 
-	for idx := range headerOrder {
-		if headerOrder[idx] != currHeaderOrder[idx] {
-			return fmt.Errorf("header order not matched: %s", currHeaderOrder)
-		}
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return err
 	}
 
-	var books []sqlc.InsertBooksParams
-	for {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			break
+	var bookJson []collection.BookItemsDoc
+	err = json.Unmarshal(b, &bookJson)
+	if err != nil {
+		return err
+	}
+
+	var bookDB []sqlc.InsertBooksParams
+	for _, book := range bookJson {
+		book := sqlc.InsertBooksParams{
+			Title:           pgtype.Text{String: book.Bookname, Valid: true},
+			Author:          pgtype.Text{String: book.Authors, Valid: true},
+			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
+			Publicationyear: pgtype.Text{String: book.PublicationYear, Valid: true},
+			Isbn:            pgtype.Text{String: book.ISBN13, Valid: true},
+			Setisbn:         pgtype.Text{String: book.SetISBN13, Valid: true},
+			Volume:          pgtype.Text{String: book.Vol, Valid: true},
+			Imageurl:        pgtype.Text{Valid: false},
+			Bookdescription: pgtype.Text{Valid: false},
 		}
+		bookDB = append(bookDB, book)
+	}
+
+	for _, book := range bookDB {
+		_, err := conn.InsertBooks(ctx, book)
 		if err != nil {
 			return err
 		}
-
-		bookCountInt, err := strconv.ParseInt(record[10], 10, 32)
-		if err != nil {
-			bookCountInt = 0
-		}
-
-		loanCountInt, err := strconv.ParseInt(record[11], 10, 32)
-		if err != nil {
-			loanCountInt = 0
-		}
-
-		// registrationDate 파싱
-		registrationDate, err := time.Parse("2006-01-02", record[12])
-		if err != nil {
-			return fmt.Errorf("invalid date format for registration date: %v", record[12])
-		}
-
-		book := sqlc.InsertBooksParams{
-			// {"번호", "도서명", "저자", "출판사", "발행년도", "ISBN", "세트 ISBN", "부가기호", "권", "주제분류번호", "도서권수", "대출건수", "등록일자", ""}
-			Title:            pgtype.Text{String: record[1], Valid: true},
-			Author:           pgtype.Text{String: record[2], Valid: true},
-			Publisher:        pgtype.Text{String: record[3], Valid: true},
-			Publicationyear:  pgtype.Text{String: record[4], Valid: true},
-			Isbn:             pgtype.Text{String: record[5], Valid: true},
-			Setisbn:          pgtype.Text{String: record[6], Valid: true},
-			Additionalcode:   pgtype.Text{String: record[7], Valid: true},
-			Volume:           pgtype.Text{String: record[8], Valid: true},
-			Subjectcode:      pgtype.Text{String: record[9], Valid: true},
-			Bookcount:        pgtype.Int4{Int32: int32(bookCountInt), Valid: true},
-			Loancount:        pgtype.Int4{Int32: int32(loanCountInt), Valid: true},
-			Registrationdate: pgtype.Date{Time: registrationDate, Valid: true},
-		}
-		books = append(books, book)
 	}
-
-	i, err := conn.InsertBooks(ctx, books)
-	if err != nil {
-		return err
-	}
-	fmt.Println(i)
 
 	return nil
 }

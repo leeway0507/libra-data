@@ -1,7 +1,7 @@
 -- name: GetBooks :many
 SELECT * FROM Books;
 
--- name: InsertBooks :copyfrom
+-- name: InsertBooks :many
 INSERT INTO
     Books (
         ISBN,
@@ -10,12 +10,9 @@ INSERT INTO
         Publisher,
         PublicationYear,
         SetISBN,
-        AdditionalCode,
         Volume,
-        SubjectCode,
-        BookCount,
-        LoanCount,
-        RegistrationDate
+        ImageURL,
+        BookDescription
     )
 VALUES (
         $1,
@@ -26,15 +23,20 @@ VALUES (
         $6,
         $7,
         $8,
-        $9,
-        $10,
-        $11,
-        $12
-    );
+        $9
+    )
+ON CONFLICT (ISBN) DO NOTHING
+RETURNING
+    ID;
 
+-- name: DeleteAllBooksRowForTest :one
+DELETE FROM Books RETURNING ID;
+
+-- name: DeleteAllLibariesForTest :one
+DELETE FROM Libraries RETURNING ID;
 -- name: InsertLibraries :copyfrom
 INSERT INTO
-    libraries (
+    Libraries (
         LibCode,
         LibName,
         LibAddress,

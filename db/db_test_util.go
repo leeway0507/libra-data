@@ -52,8 +52,8 @@ func DropTestTable(conn *pgx.Conn, ctx context.Context) error {
 
 	parts := strings.Split(query, "CREATE TABLE")
 
-	for _, part := range parts {
-		trimmed := strings.Split(part, "(")[0]
+	for idx := range parts {
+		trimmed := strings.Split(parts[len(parts)-(idx+1)], "(")[0]
 		if trimmed != "" {
 			dropQuery := "DROP TABLE " + trimmed + ";"
 			_, err = conn.Exec(ctx, dropQuery)
