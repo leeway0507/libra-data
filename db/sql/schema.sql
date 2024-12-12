@@ -23,7 +23,7 @@ CREATE TABLE Libraries (
     Latitude FLOAT,
     Longtitude FLOAT,
     Homepage VARCHAR(100),
-    Closed VARCHAR(255),
-    OperatingTime VARCHAR(255),
+    Closed VARCHAR(512),
+    OperatingTime VARCHAR(512),
     BookCount INTEGER
 );
