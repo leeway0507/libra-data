@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getBooks = `-- name: GetBooks :many
@@ -45,4 +47,32 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+type InsertBooksParams struct {
+	Isbn             pgtype.Text
+	Title            pgtype.Text
+	Author           pgtype.Text
+	Publisher        pgtype.Text
+	Publicationyear  pgtype.Text
+	Setisbn          pgtype.Text
+	Additionalcode   pgtype.Text
+	Volume           pgtype.Text
+	Subjectcode      pgtype.Text
+	Bookcount        pgtype.Int4
+	Loancount        pgtype.Int4
+	Registrationdate pgtype.Date
+}
+
+type InsertLibrariesParams struct {
+	Libcode       pgtype.Int4
+	Libname       pgtype.Text
+	Libaddress    pgtype.Text
+	Tel           pgtype.Text
+	Latitude      pgtype.Float8
+	Longtitude    pgtype.Float8
+	Homepage      pgtype.Text
+	Closed        pgtype.Text
+	Operatingtime pgtype.Text
+	Bookcount     pgtype.Int4
 }
