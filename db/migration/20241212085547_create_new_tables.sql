@@ -4,7 +4,7 @@ CREATE TABLE Books (
     ID SERIAL PRIMARY KEY,
     ISBN VARCHAR(15) UNIQUE,
     Title VARCHAR(1024),
-    Author VARCHAR(255),
+    Author VARCHAR(512),
     Publisher VARCHAR(255),
     PublicationYear VARCHAR(50),
     SetISBN VARCHAR(255),
