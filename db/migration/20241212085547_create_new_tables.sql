@@ -9,11 +9,7 @@ CREATE TABLE Books (
     PublicationYear VARCHAR(50),
     SetISBN VARCHAR(255),
     AdditionalCode VARCHAR(255),
-    Volume VARCHAR(50),
-    SubjectCode VARCHAR(50),
-    BookCount INTEGER DEFAULT 0,
-    LoanCount INTEGER DEFAULT 0,
-    RegistrationDate DATE
+    Volume VARCHAR(50)
 );
 
 CREATE TABLE Libraries (
@@ -29,6 +25,19 @@ CREATE TABLE Libraries (
     OperatingTime VARCHAR(512),
     BookCount INTEGER
 );
+
+CREATE TABLE LibsBooks (
+    ID SERIAL PRIMARY KEY,
+    LibCode INTEGER,
+    ISBN VARCHAR(15),
+    CLASSNUM VARCHAR(255),
+    BOOKCODE VARCHAR(100),
+    SHELFCODE VARCHAR(100),
+    SHELFNAME VARCHAR(100),
+    FOREIGN KEY (LibCode) REFERENCES Libraries (LibCode) ON DELETE CASCADE,
+    FOREIGN KEY (ISBN) REFERENCES Books (ISBN) ON DELETE CASCADE,
+    UNIQUE (LibCode, ISBN)
+);
 -- +goose StatementEnd
 
 -- +goose Down
@@ -36,4 +45,6 @@ CREATE TABLE Libraries (
 DROP TABLE Books;
 
 DROP TABLE Libraries;
+
+DROP TABLE LibsBooks;
 -- +goose StatementEnd
