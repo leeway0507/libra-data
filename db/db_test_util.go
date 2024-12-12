@@ -29,11 +29,10 @@ func CreateTestTable(conn *pgx.Conn, ctx context.Context) error {
 		if trimmed != "" {
 			createQuery := "CREATE TABLE " + trimmed
 			_, err = conn.Exec(ctx, createQuery)
-			fmt.Println("create query", createQuery)
 			if err != nil {
-				fmt.Println(err.Error())
 				return err
 			}
+			fmt.Println("create query", createQuery)
 		}
 	}
 	return nil
@@ -57,10 +56,10 @@ func DropTestTable(conn *pgx.Conn, ctx context.Context) error {
 		if trimmed != "" {
 			dropQuery := "DROP TABLE " + trimmed + ";"
 			_, err = conn.Exec(ctx, dropQuery)
-			fmt.Println("drop query : ", dropQuery)
 			if err != nil {
 				return err
 			}
+			fmt.Println("drop query : ", dropQuery)
 		}
 	}
 	return nil

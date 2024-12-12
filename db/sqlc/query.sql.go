@@ -33,6 +33,17 @@ func (q *Queries) DeleteAllLibariesForTest(ctx context.Context) (int32, error) {
 	return id, err
 }
 
+const deleteAllLibsBooksForTest = `-- name: DeleteAllLibsBooksForTest :one
+DELETE FROM libsbooks RETURNING ID
+`
+
+func (q *Queries) DeleteAllLibsBooksForTest(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, deleteAllLibsBooksForTest)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getBooks = `-- name: GetBooks :many
 SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, bookdescription FROM Books
 `
@@ -150,4 +161,56 @@ type InsertLibrariesParams struct {
 	Closed        pgtype.Text
 	Operatingtime pgtype.Text
 	Bookcount     pgtype.Int4
+}
+
+const insertLibsBooks = `-- name: InsertLibsBooks :many
+INSERT INTO
+    Libsbooks (
+        libcode,
+        isbn,
+        classnum,
+        bookcode,
+        shelfcode,
+        shelfname
+    )
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (isbn, libcode) DO NOTHING
+RETURNING
+    ID
+`
+
+type InsertLibsBooksParams struct {
+	Libcode   pgtype.Int4
+	Isbn      pgtype.Text
+	Classnum  pgtype.Text
+	Bookcode  pgtype.Text
+	Shelfcode pgtype.Text
+	Shelfname pgtype.Text
+}
+
+func (q *Queries) InsertLibsBooks(ctx context.Context, arg InsertLibsBooksParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, insertLibsBooks,
+		arg.Libcode,
+		arg.Isbn,
+		arg.Classnum,
+		arg.Bookcode,
+		arg.Shelfcode,
+		arg.Shelfname,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

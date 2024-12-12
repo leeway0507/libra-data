@@ -28,12 +28,30 @@ VALUES (
 ON CONFLICT (ISBN) DO NOTHING
 RETURNING
     ID;
+-- name: InsertLibsBooks :many
+INSERT INTO
+    Libsbooks (
+        libcode,
+        isbn,
+        classnum,
+        bookcode,
+        shelfcode,
+        shelfname
+    )
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (isbn, libcode) DO NOTHING
+RETURNING
+    ID;
 
 -- name: DeleteAllBooksRowForTest :one
 DELETE FROM Books RETURNING ID;
 
 -- name: DeleteAllLibariesForTest :one
 DELETE FROM Libraries RETURNING ID;
+
+-- name: DeleteAllLibsBooksForTest :one
+DELETE FROM libsbooks RETURNING ID;
+
 -- name: InsertLibraries :copyfrom
 INSERT INTO
     Libraries (
