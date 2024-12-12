@@ -14,7 +14,7 @@ func Test_Insert(t *testing.T) {
 	config := config.GetEnvConfig()
 
 	ctx := context.Background()
-	conn := connectPG(config.DATABASE_TEST_URL, ctx)
+	conn := ConnectPG(config.DATABASE_TEST_URL, ctx)
 	defer conn.Close(ctx)
 	// err := CreateTestTable(conn, ctx)
 	// if err != nil {
