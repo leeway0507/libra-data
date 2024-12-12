@@ -2,17 +2,17 @@ package db
 
 import (
 	"context"
-	"libraData"
+	"libraData/config"
 	"testing"
 
 	"github.com/caarlos0/env/v11"
 )
 
 func Test_Connect(t *testing.T) {
-	libraData.GetEnvConfig()
+	config.GetEnvConfig()
 
 	t.Run("test", func(t *testing.T) {
-		var cfg libraData.EnvConfig
+		var cfg config.EnvConfig
 		err := env.Parse(&cfg)
 		if err != nil {
 			t.Fatal(err)

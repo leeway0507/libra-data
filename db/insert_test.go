@@ -2,17 +2,18 @@ package db
 
 import (
 	"context"
-	"libraData"
+	"libraData/config"
 	sqlc "libraData/db/sqlc"
+
 	"path/filepath"
 	"testing"
 )
 
 func Test_Insert(t *testing.T) {
-	cfg := libraData.GetEnvConfig()
+	config := config.GetEnvConfig()
 
 	ctx := context.Background()
-	conn := connectPG(cfg.DATABASE_TEST_URL, ctx)
+	conn := connectPG(config.DATABASE_TEST_URL, ctx)
 	defer conn.Close(ctx)
 	err := CreateTestTable(conn, ctx)
 	if err != nil {

@@ -1,4 +1,4 @@
-package libraData
+package utils
 
 import (
 	"libraData/model"
