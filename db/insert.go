@@ -56,6 +56,56 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 
 	return nil
 }
+func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string, libCode int32) error {
+	f, err := os.Open(jsonPath)
+	if err != nil {
+		return err
+	}
+
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
+	var bookJson []collection.BookItemsDoc
+	err = json.Unmarshal(b, &bookJson)
+	if err != nil {
+		return err
+	}
+
+	var bookDB []sqlc.InsertLibsBooksParams
+	for _, book := range bookJson {
+		var Shelfcode string
+		var Shelfname string
+		var BookCode string
+		arr := book.CallNumbers
+
+		if arr != nil && arr[0].CallNumber.ShelfLocCode != "" {
+			Shelfcode = book.CallNumbers[0].CallNumber.ShelfLocCode
+			Shelfname = book.CallNumbers[0].CallNumber.ShelfLocName
+			BookCode = book.CallNumbers[0].CallNumber.BookCode
+
+		}
+		book := sqlc.InsertLibsBooksParams{
+			Libcode:   pgtype.Int4{Int32: libCode, Valid: true},
+			Isbn:      pgtype.Text{String: book.ISBN13, Valid: true},
+			Classnum:  pgtype.Text{String: book.ClassNo, Valid: true},
+			Bookcode:  pgtype.Text{String: BookCode, Valid: true},
+			Shelfcode: pgtype.Text{String: Shelfcode, Valid: true},
+			Shelfname: pgtype.Text{String: Shelfname, Valid: true},
+		}
+		bookDB = append(bookDB, book)
+	}
+
+	for _, book := range bookDB {
+		_, err := conn.InsertLibsBooks(ctx, book)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func InsertLibInfoBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
 	var rawData []map[string]string
