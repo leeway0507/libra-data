@@ -8,8 +8,9 @@ CREATE TABLE Books (
     Publisher VARCHAR(255),
     PublicationYear VARCHAR(50),
     SetISBN VARCHAR(255),
-    AdditionalCode VARCHAR(255),
-    Volume VARCHAR(50)
+    Volume VARCHAR(50),
+    ImageURL VARCHAR(512),
+    BookDescription TEXT
 );
 
 CREATE TABLE Libraries (
@@ -42,9 +43,10 @@ CREATE TABLE LibsBooks (
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE LibsBooks;
+
 DROP TABLE Books;
 
 DROP TABLE Libraries;
 
-DROP TABLE LibsBooks;
 -- +goose StatementEnd

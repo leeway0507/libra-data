@@ -6,8 +6,9 @@ CREATE TABLE Books (
     Publisher VARCHAR(255),
     PublicationYear VARCHAR(50),
     SetISBN VARCHAR(255),
-    AdditionalCode VARCHAR(255),
-    Volume VARCHAR(50)
+    Volume VARCHAR(50),
+    ImageURL VARCHAR(512),
+    BookDescription TEXT
 );
 
 CREATE TABLE Libraries (
