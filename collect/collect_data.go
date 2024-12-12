@@ -1,4 +1,4 @@
-package collection
+package collect
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ func GetAllBooksFromLib(libCode int, startDate string, endDate string) error {
 	fmt.Printf("Planned Request Page : %v", totalPage)
 
 	folderName := strings.Join([]string{startDate, endDate, strconv.Itoa(pageSize), strconv.Itoa(totalPage)}, "-")
-	folderPath := filepath.Join(cfg.TEMP_PATH, strconv.Itoa(libCode), folderName)
+	folderPath := filepath.Join(cfg.DATA_PATH, "temp", strconv.Itoa(libCode), folderName)
 
 	// make folders
 	if _, err = os.ReadDir(folderPath); err != nil {

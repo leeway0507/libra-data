@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData/collection"
+	"libraData/collect"
 	sqlc "libraData/db/sqlc"
 	"libraData/utils"
 	"os"
@@ -25,7 +25,7 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 		return err
 	}
 
-	var bookJson []collection.BookItemsDoc
+	var bookJson []collect.BookItemsDoc
 	err = json.Unmarshal(b, &bookJson)
 	if err != nil {
 		return err
@@ -41,8 +41,8 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 			Isbn:            pgtype.Text{String: book.ISBN13, Valid: true},
 			Setisbn:         pgtype.Text{String: book.SetISBN13, Valid: true},
 			Volume:          pgtype.Text{String: book.Vol, Valid: true},
-			Imageurl:        pgtype.Text{Valid: false},
-			Bookdescription: pgtype.Text{Valid: false},
+			Imageurl:        pgtype.Text{Valid: true},
+			Bookdescription: pgtype.Text{Valid: true},
 		}
 		bookDB = append(bookDB, book)
 	}
@@ -50,6 +50,8 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 	for _, book := range bookDB {
 		_, err := conn.InsertBooks(ctx, book)
 		if err != nil {
+			b, _ := json.Marshal(book)
+			fmt.Println(string(b))
 			return err
 		}
 	}
@@ -67,7 +69,7 @@ func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context
 		return err
 	}
 
-	var bookJson []collection.BookItemsDoc
+	var bookJson []collect.BookItemsDoc
 	err = json.Unmarshal(b, &bookJson)
 	if err != nil {
 		return err
@@ -79,8 +81,7 @@ func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context
 		var Shelfname string
 		var BookCode string
 		arr := book.CallNumbers
-
-		if arr != nil && arr[0].CallNumber.ShelfLocCode != "" {
+		if len(arr) > 0 && arr[0].CallNumber.ShelfLocCode != "" {
 			Shelfcode = book.CallNumbers[0].CallNumber.ShelfLocCode
 			Shelfname = book.CallNumbers[0].CallNumber.ShelfLocName
 			BookCode = book.CallNumbers[0].CallNumber.BookCode
@@ -106,7 +107,6 @@ func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context
 
 	return nil
 }
-
 func InsertLibInfoBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
 	var rawData []map[string]string
 	file, err := utils.LoadFile(jsonPath)

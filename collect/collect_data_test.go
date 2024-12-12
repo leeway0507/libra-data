@@ -1,6 +1,7 @@
-package collection
+package collect
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -8,12 +9,7 @@ func TestCollectData(t *testing.T) {
 
 	var bookItemsResp *BookItemsResponse
 	var bookItems *[]BookItemsDoc
-	// t.Run("Get Lib Books All", func(t *testing.T) {
-	// 	err := GetBookItemsAll(111015, "2024-01-01", "2024-11-30", "temp.json")
-	// 	if err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// })
+
 	t.Run("Get and preprocess and save lib", func(t *testing.T) {
 		resp, err := GetBookItems(111015, "2024-01-01", "2024-11-30", 1, 500)
 		if err != nil {
@@ -34,8 +30,6 @@ func TestCollectData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		// fmt.Println("bookItemsResp", bookItemsResp)
 	})
 
 	t.Run("Preprocess lib books", func(t *testing.T) {
@@ -45,7 +39,7 @@ func TestCollectData(t *testing.T) {
 		}
 	})
 	t.Run("save lib books", func(t *testing.T) {
-		err := SaveBookItemsAsJson("temp.json", bookItems)
+		err := SaveBookItemsAsJson(filepath.Join(cfg.DATA_PATH, "temp", "temp.json"), bookItems)
 		if err != nil {
 			t.Fatal(err)
 		}
