@@ -25,6 +25,8 @@ go.work.sum
 config.go
 .env
 
+*/.DS_Store
 .DS_Store
+
 
 /data
