@@ -1,4 +1,4 @@
-package collect
+package collection
 
 type BookItemsResponse struct {
 	Docs []struct {

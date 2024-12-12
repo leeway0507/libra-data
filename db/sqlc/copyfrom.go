@@ -9,49 +9,6 @@ import (
 	"context"
 )
 
-// iteratorForInsertBooks implements pgx.CopyFromSource.
-type iteratorForInsertBooks struct {
-	rows                 []InsertBooksParams
-	skippedFirstNextCall bool
-}
-
-func (r *iteratorForInsertBooks) Next() bool {
-	if len(r.rows) == 0 {
-		return false
-	}
-	if !r.skippedFirstNextCall {
-		r.skippedFirstNextCall = true
-		return true
-	}
-	r.rows = r.rows[1:]
-	return len(r.rows) > 0
-}
-
-func (r iteratorForInsertBooks) Values() ([]interface{}, error) {
-	return []interface{}{
-		r.rows[0].Isbn,
-		r.rows[0].Title,
-		r.rows[0].Author,
-		r.rows[0].Publisher,
-		r.rows[0].Publicationyear,
-		r.rows[0].Setisbn,
-		r.rows[0].Additionalcode,
-		r.rows[0].Volume,
-		r.rows[0].Subjectcode,
-		r.rows[0].Bookcount,
-		r.rows[0].Loancount,
-		r.rows[0].Registrationdate,
-	}, nil
-}
-
-func (r iteratorForInsertBooks) Err() error {
-	return nil
-}
-
-func (q *Queries) InsertBooks(ctx context.Context, arg []InsertBooksParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"books"}, []string{"isbn", "title", "author", "publisher", "publicationyear", "setisbn", "additionalcode", "volume", "subjectcode", "bookcount", "loancount", "registrationdate"}, &iteratorForInsertBooks{rows: arg})
-}
-
 // iteratorForInsertLibraries implements pgx.CopyFromSource.
 type iteratorForInsertLibraries struct {
 	rows                 []InsertLibrariesParams

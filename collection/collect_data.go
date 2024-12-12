@@ -1,4 +1,4 @@
-package collect
+package collection
 
 import (
 	"encoding/json"
@@ -20,10 +20,10 @@ import (
 
 var cfg config.EnvConfig = *config.GetEnvConfig()
 
-func GetBookItemsAll(libCode int, startDate string, endDate string) error {
+func GetAllBooksFromLib(libCode int, startDate string, endDate string) error {
 	const pageSize = 500
 
-	initResp, err := GetBookItems(libCode, startDate, endDate, 1, pageSize)
+	initResp, err := GetBookItems(libCode, startDate, endDate, 1, 1)
 	if err != nil {
 		return err
 	}
@@ -31,14 +31,8 @@ func GetBookItemsAll(libCode int, startDate string, endDate string) error {
 	fmt.Printf("total book count : %v", initResp.NumFound)
 	fmt.Printf("Planned Request Page : %v", totalPage)
 
-	//create Temp folder name
-	currPath, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	folderName := strings.Join([]string{strconv.Itoa(libCode), startDate, endDate, strconv.Itoa(pageSize), strconv.Itoa(totalPage)}, "-")
-	folderPath := filepath.Join(currPath, "data/temp", folderName)
+	folderName := strings.Join([]string{startDate, endDate, strconv.Itoa(pageSize), strconv.Itoa(totalPage)}, "-")
+	folderPath := filepath.Join(cfg.TEMP_PATH, strconv.Itoa(libCode), folderName)
 
 	// make folders
 	if _, err = os.ReadDir(folderPath); err != nil {
