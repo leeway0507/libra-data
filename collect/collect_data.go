@@ -28,8 +28,8 @@ func GetAllBooksFromLib(libCode int, startDate string, endDate string) error {
 		return err
 	}
 	totalPage := ceilDiv(initResp.NumFound, pageSize)
-	fmt.Printf("total book count : %v", initResp.NumFound)
-	fmt.Printf("Planned Request Page : %v", totalPage)
+	fmt.Printf("total book count : %v \n", initResp.NumFound)
+	fmt.Printf("Planned Request Page : %v \n", totalPage)
 
 	folderName := strings.Join([]string{startDate, endDate, strconv.Itoa(pageSize), strconv.Itoa(totalPage)}, "-")
 	folderPath := filepath.Join(cfg.DATA_PATH, "temp", strconv.Itoa(libCode), folderName)
@@ -52,18 +52,22 @@ func GetAllBooksFromLib(libCode int, startDate string, endDate string) error {
 			if os.IsNotExist(err) {
 				resp, err := GetBookItems(libCode, startDate, endDate, currPage, pageSize)
 				if err != nil {
-					return err
+					fmt.Printf("Error : GetBookItems %v \n", err)
+					continue
 				}
 				docs, err := PreprocessBookItems(resp)
 				if err != nil {
-					return err
+					return fmt.Errorf("PreprocessBookItems : %v", err)
 				}
 				err = SaveBookItemsAsJson(fileName, docs)
 				if err != nil {
-					return err
+					return fmt.Errorf("SaveBookItemsAsJson : %v", err)
 				}
+			} else {
+				return fmt.Errorf("os.IsNotExist : %v", err)
 			}
 		}
+
 		bar.Add(1)
 	}
 	return nil
@@ -85,8 +89,8 @@ func GetBookItems(libCode int, startDate string, endDate string, pageNo int, pag
 
 	url.RawQuery = queryParam.Encode()
 	resp, err := http.Get(url.String())
-	if err != nil {
-		return nil, err
+	if resp.StatusCode != 200 || err != nil {
+		return nil, fmt.Errorf("response Error %v status code : %v ", err, resp.StatusCode)
 	}
 	bodyRaw := resp.Body
 	defer bodyRaw.Close()
@@ -116,7 +120,6 @@ func PreprocessBookItems(resp *BookItemsResponse) (*[]BookItemsDoc, error) {
 	return &docs, nil
 }
 func SaveBookItemsAsJson(jsonPath string, bookItems *[]BookItemsDoc) error {
-
 	jsonFile, err := os.Create(jsonPath)
 	if err != nil {
 		return err
