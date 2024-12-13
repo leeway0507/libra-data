@@ -1,11 +1,12 @@
 import { chromium, type Page, type Locator } from 'playwright';
 import fsAsync from 'fs/promises';
+import fsSync from 'fs'
 import path from 'path';
 
-const DATA_PATH = "/Users/yangwoolee/repo/libra-data/scraper"
+
 const SEARCH_URL = "https://search.kyobobook.co.kr/search?gbCode=TOT&target=total"
 
-type ScrapData = {
+export type ScrapData = {
     toc: string
     recommendation: string
     description: string
@@ -23,15 +24,14 @@ interface BookScraper {
     saveHtml(): void
     saveImage(byte: Buffer): "ok" | "fail"
     searchBook(searchURL: string): Promise<string>
-    getRecommendation(): string
-    getToc(): string
-    getDescription(): string
+    extractData(): Promise<ScrapData>
 }
 
 export class kyoboScraper implements BookScraper {
     page!: Page;
     scraperName: string = "kyobo"
     isbn!: string
+    dataPath: string = "/Users/yangwoolee/repo/libra-data/scraper/temp/html"
 
 
     async exec(isbn: string): Promise<string | null> {
@@ -61,8 +61,8 @@ export class kyoboScraper implements BookScraper {
 
     }
     async loadLocalSpecPage(): Promise<boolean> {
-        const localFilePath = path.join(DATA_PATH, "temp", "html", this.scraperName, this.isbn + ".html")
-        if (await fsAsync.exists(localFilePath)) {
+        const localFilePath = path.join(this.dataPath, this.scraperName, this.isbn + ".html")
+        if (fsSync.existsSync(localFilePath)) {
             await this.page.goto(localFilePath)
             return true
         }
@@ -79,7 +79,12 @@ export class kyoboScraper implements BookScraper {
         return true
 
     }
-    saveHtml(): void {
+    async saveHtml() {
+        const html = await this.page.content()
+        const localFilePath = path.join(this.dataPath, this.scraperName, this.isbn + ".html")
+        await fsAsync.mkdir(path.dirname(localFilePath), { recursive: true })
+        const isFileExist = fsSync.existsSync(localFilePath)
+        if (!isFileExist) return await fsAsync.writeFile(localFilePath, html, { flag: 'wx' })
 
     }
     saveImage(byte: Buffer): "ok" | "fail" {
@@ -91,18 +96,39 @@ export class kyoboScraper implements BookScraper {
 
         const selector = '//ul[@class="prod_list"]//a[@class="prod_link"]';
         const loc = this.page.locator(selector);
-        const specUrl = await loc.count() > 1 ? await loc.first().getAttribute("href") : ""
-        console.log(await loc.count(), specUrl)
+        const specUrl = await loc.count() > 0 ? await loc.first().getAttribute("href") : ""
         return specUrl || ""
     }
-    getRecommendation(): string {
-        return ""
+    async extractData(): Promise<ScrapData> {
+        return {
+            toc: await this.getToc(),
+            recommendation: await this.getRecommendation(),
+            description: await this.getDescription(),
+            source: this.scraperName,
+            url: this.page.url()
+        }
+
     }
-    getToc(): string {
-        return ""
+    async getRecommendation(): Promise<string> {
+        const recoXpathFirst = '//div[@class="product_detail_area book_publish_review"]'
+        const loc = this.page.locator(recoXpathFirst)
+        const recoXpathSec = '//p[@class="info_text"]'
+        var loc2
+        if (await loc.count() > 0) {
+            loc2 = loc.locator(recoXpathSec)
+        }
+        return await loc2?.count() && await loc2?.textContent() || ""
     }
-    getDescription(): string {
-        return ""
+    async getToc(): Promise<string> {
+        const tocXpath = '//li[@class="book_contents_item"]'
+        const loc = this.page.locator(tocXpath)
+        console.log("count", await loc.count())
+        return await loc.count() && await loc.textContent() || ""
+    }
+    async getDescription(): Promise<string> {
+        const descXpath = '//div[@class="intro_bottom"]'
+        const loc = this.page.locator(descXpath)
+        return await loc.count() && await loc.textContent() || ""
     }
 
 }
