@@ -1,18 +1,25 @@
-import { kyoboScraper, type ScrapData } from "./book-scraper";
+import { kyoboScraper, initBrowser, scrapIsbns } from "./book-scraper";
 import { expectTypeOf } from 'expect-type';
 import path from 'path';
 import { describe, test as it, expect } from "bun:test";
 import fsSync from "fs"
 
-describe(('book scraper'), async () => {
+describe("multi scrap", () => {
+    it('should execute multi page ', async () => {
+        await scrapIsbns(["9791163034735", "9791163034735"], 2)
+    }, { timeout: 10_000 });
 
-    const scraper = new kyoboScraper();
+})
+
+describe(('book scraper'), async () => {
+    const browser = await initBrowser()
+
+    const scraper = new kyoboScraper(await browser.newPage()); // 점프 투 파이썬
     scraper.dataPath = "/Users/yangwoolee/repo/libra-data/scraper/temp/test"
-    scraper.isbn = "9791156000846"
-    // scraper.isbn = "9791163034735" // 점프 투 파이썬
+    scraper.isbn = "9791163034735"
+
     const searchPath = "file:///Users/yangwoolee/repo/libra-data/scraper/temp/test/kyobo/search.html"
     const specPath = `file:///Users/yangwoolee/repo/libra-data/scraper/temp/test/kyobo/${scraper.isbn}.html`
-    await scraper.initBrowser()
 
     it('should loadWebSpecPage ', async () => {
         const isloaded = await scraper.loadWebSpecPage();
