@@ -1,10 +1,9 @@
-import { chromium, type Page, type Locator } from 'playwright';
+import { chromium, type Page, type Browser, BrowserContext } from 'playwright';
 import path from 'path';
 import { fetch } from 'bun';
 import fsAsync from "fs/promises"
 import pino, { type Logger } from "pino"
 import pretty from "pino-pretty"
-
 
 const CURRENT_PATH = "/Users/yangwoolee/repo/libra-data/scraper"
 const SEARCH_URL = "https://search.kyobobook.co.kr/search?gbCode=TOT&target=total"
@@ -22,22 +21,51 @@ const LoggingFile = pino.destination({
     append: 'stack'
 })
 
-const streams = [
-    { level: 'debug', stream: pretty() },
-    { level: 'debug', stream: LoggingFile },
-]
-
 const LoggerInstance: Logger = pino(
     {
         timestamp: pino.stdTimeFunctions.isoTime,
         level: "debug",
     },
-    pino.multistream(streams),
+    pino.multistream([
+        { level: 'info', stream: pretty() },
+        { level: 'debug', stream: LoggingFile },
+    ]),
 )
+
+export async function initBrowser(headless: boolean = false): Promise<BrowserContext> {
+    const bravePath = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
+    const browser = await chromium.launch({
+        executablePath: bravePath,
+        headless,
+    });
+    return await browser.newContext()
+}
+
+export async function scrapIsbns(isbns: string[], numWorker: number): Promise<ScrapData[]> {
+    const ctx = await initBrowser()
+
+    const isbnsChunk: string[][] = [];
+    while (isbns.length > 0)
+        isbnsChunk.push(isbns.splice(0, numWorker));
+
+    const _numWorker = Math.min(isbnsChunk.length, numWorker)
+    const workers = await Promise.all(
+        Array(_numWorker)
+            .fill(null)
+            .map(async () => new kyoboScraper(await ctx.newPage()))
+    );
+
+    const result = await Promise.all(
+        workers.map((worker, idx) =>
+            worker.execAll(isbnsChunk[idx]))
+    )
+    return result.flat(1).filter(x => x != null)
+}
+
 
 
 interface BookScraper {
-    exec(isbn: string): Promise<ScrapData | null>
+    exec(): Promise<ScrapData | null>
     loadSpecPage(): void
     loadLocalSpecPage(): Promise<boolean>
     loadWebSpecPage(): Promise<boolean>
@@ -49,15 +77,26 @@ interface BookScraper {
 
 export class kyoboScraper implements BookScraper {
     page!: Page;
-    scraperName = "kyobo"
     isbn!: string
+    scraperName = "kyobo"
     dataPath = "/Users/yangwoolee/repo/libra-data/scraper/temp/html"
-    bravePath = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
     logger = LoggerInstance
 
-    async exec(isbn: string): Promise<ScrapData | null> {
-        this.isbn = isbn
-        await this.initBrowser()
+    constructor(page: Page) {
+        this.page = page
+    }
+
+    async execAll(isbns: string[] | undefined): Promise<(ScrapData | null)[]> {
+        if (!isbns) return []
+        const result: (ScrapData | null)[] = []
+        for (const isbn of isbns) {
+            this.isbn = isbn;
+            result.push(await this.exec())
+        }
+        return result
+    }
+
+    async exec(): Promise<ScrapData | null> {
         const isSpecPageLoaded = await this.loadSpecPage()
         if (!isSpecPageLoaded) {
             this.logger.error(`${this.isbn} not found!`)
@@ -68,16 +107,7 @@ export class kyoboScraper implements BookScraper {
         return await this.extractData()
     }
 
-    async initBrowser(headless: boolean = false) {
-        if (!this.page) {
-            this.logger.info("init browser")
-            const browser = await chromium.launch({
-                executablePath: this.bravePath,
-                headless,
-            });
-            this.page = await browser.newPage(); // Assign the new page to this.page
-        }
-    }
+
 
     async loadSpecPage() {
         const isLocalLoaded = await this.loadLocalSpecPage()
@@ -119,7 +149,6 @@ export class kyoboScraper implements BookScraper {
     }
     async saveHtml() {
         if (this.page.url().startsWith("file://")) return
-        const pageUrl = this.page.url().split("https://")[1]
         const localFilePath = path.join(
             this.dataPath,
             this.scraperName,

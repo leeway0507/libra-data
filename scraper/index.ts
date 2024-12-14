@@ -1,26 +1,17 @@
-import { kyoboScraper } from "./book-scraper"
+import { scrapIsbns } from "./book-scraper"
 
 async function main() {
     const isbnArr = [
-        // "9791156000846",
-        // "9791193217078",
-        // "9791197932564",
-        // "9788980783144",
-        // "9791192987354",
-        // "9788980783144",
+        "9791156000846",
+        "9791193217078",
+        "9791197932564",
+        "9788980783144",
+        "9791192987354",
+        "9788980783144",
         "9791158394622",
-        // "9788957273647",
-        // "9791165711856",
-        // "9791193926260",
-        // "9791169212168",
     ]
-    const scraper = new kyoboScraper()
-    const x = await Promise.all((isbnArr.map(async (isbn) => {
-        return await scraper.exec(isbn)
-    })))
-
+    const x = await scrapIsbns(isbnArr, 3)
     console.log(x)
-
 }
 
 main().catch((err) => {
