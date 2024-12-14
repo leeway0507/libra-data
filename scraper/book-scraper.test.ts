@@ -5,12 +5,13 @@ import { describe, test as it, expect } from "bun:test";
 import fsSync from "fs"
 
 describe(('book scraper'), async () => {
-    const specPath = "file:///Users/yangwoolee/repo/libra-data/scraper/temp/test/kyobo/spec.html"
-    const searchPath = "file:///Users/yangwoolee/repo/libra-data/scraper/temp/test/kyobo/search.html"
 
     const scraper = new kyoboScraper();
     scraper.dataPath = "/Users/yangwoolee/repo/libra-data/scraper/temp/test"
-    scraper.isbn = "9791163034735" // 점프 투 파이썬
+    scraper.isbn = "9791156000846"
+    // scraper.isbn = "9791163034735" // 점프 투 파이썬
+    const searchPath = "file:///Users/yangwoolee/repo/libra-data/scraper/temp/test/kyobo/search.html"
+    const specPath = `file:///Users/yangwoolee/repo/libra-data/scraper/temp/test/kyobo/${scraper.isbn}.html`
     await scraper.initBrowser()
 
     it('should loadWebSpecPage ', async () => {
@@ -40,8 +41,7 @@ describe(('book scraper'), async () => {
     });
     it('should get image url', async () => {
         await scraper.page.goto(specPath)
-
-        const src = await scraper.extractImageSrc()
+        await scraper.extractImageSrc()
     })
 
     it('should saveImage ', async () => {

@@ -1,8 +1,7 @@
 import { chromium, type Page, type Locator } from 'playwright';
-import fsAsync from 'fs/promises';
-import fsSync from 'fs'
 import path from 'path';
 import { fetch } from 'bun';
+import fsAsync from "fs/promises"
 import pino, { type Logger } from "pino"
 import pretty from "pino-pretty"
 
@@ -38,7 +37,7 @@ const LoggerInstance: Logger = pino(
 
 
 interface BookScraper {
-    exec(isbn: string): Promise<string | null>
+    exec(isbn: string): Promise<ScrapData | null>
     loadSpecPage(): void
     loadLocalSpecPage(): Promise<boolean>
     loadWebSpecPage(): Promise<boolean>
@@ -56,14 +55,17 @@ export class kyoboScraper implements BookScraper {
     bravePath = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
     logger = LoggerInstance
 
-
-
-    async exec(isbn: string): Promise<string | null> {
+    async exec(isbn: string): Promise<ScrapData | null> {
         this.isbn = isbn
+        await this.initBrowser()
         const isSpecPageLoaded = await this.loadSpecPage()
-        if (!isSpecPageLoaded) return `${this.isbn} not found!`
-
-        return null
+        if (!isSpecPageLoaded) {
+            this.logger.error(`${this.isbn} not found!`)
+            return null
+        }
+        await this.saveHtml()
+        await this.saveImage()
+        return await this.extractData()
     }
 
     async initBrowser(headless: boolean = false) {
@@ -94,7 +96,7 @@ export class kyoboScraper implements BookScraper {
     }
     async loadLocalSpecPage(): Promise<boolean> {
         const localFilePath = path.join(this.dataPath, this.scraperName, this.isbn + ".html")
-        if (fsSync.existsSync(localFilePath)) {
+        if (await Bun.file(localFilePath).exists()) {
             this.logger.debug({ localFilePath: path.join("file://", localFilePath) })
             await this.page.goto(path.join("file://", localFilePath))
             return true
@@ -107,24 +109,37 @@ export class kyoboScraper implements BookScraper {
     async loadWebSpecPage(): Promise<boolean> {
         const searchURL = new URL(SEARCH_URL)
         searchURL.searchParams.set("keyword", this.isbn)
+        this.logger.debug({ searchURL }, "loadWebSpecPage")
         const specUrl = await this.searchBook(searchURL.toString())
-        this.logger.debug({ specUrl })
+        this.logger.debug({ specUrl }, "loadWebSpecPage")
         if (specUrl === "") return false
         await this.page.goto(specUrl)
         return true
 
     }
     async saveHtml() {
-        const html = await this.page.content()
-        const localFilePath = path.join(this.dataPath, this.scraperName, this.isbn + ".html")
+        if (this.page.url().startsWith("file://")) return
+        const pageUrl = this.page.url().split("https://")[1]
+        const localFilePath = path.join(
+            this.dataPath,
+            this.scraperName,
+            `${this.isbn}.html`
+        )
+        this.logger.debug({ localFilePath }, "saveHtml")
         await fsAsync.mkdir(path.dirname(localFilePath), { recursive: true })
-        const isFileExist = fsSync.existsSync(localFilePath)
-        this.logger.debug("isFileExist : %s", isFileExist)
-        if (!isFileExist) return await fsAsync.writeFile(localFilePath, html, { flag: 'wx' })
+
+        const isFileExist = await Bun.file(localFilePath).exists()
+        this.logger.debug({ isFileExist }, "saveHtml")
+
+
+        if (!isFileExist) {
+            const html = await this.page.content()
+            return await Bun.write(Bun.file(localFilePath), html)
+        }
 
     }
     async extractImageSrc(): Promise<string> {
-        const imgXpath = '//div[@class="portrait_img_box"]/img'
+        const imgXpath = '//div[contains(@class, "portrait_img_box")]/img'
         const loc = this.page.locator(imgXpath)
         const src = await loc.count() && await loc.first().getAttribute("src") || ""
         this.logger.debug({ src }, "Extracted image source");
@@ -138,9 +153,18 @@ export class kyoboScraper implements BookScraper {
         if (src) {
             const response = await fetch(src);
             const arrayBuffer = await response.arrayBuffer();
-            const urlPaths = src.split("/")
-            const fileName = urlPaths[urlPaths.length - 1]
-            const imagePath = path.join(this.dataPath, this.scraperName, "image", fileName)
+
+            const bookNameXpath = "//span[@class='prod_title']"
+            const bookName = await this.page.locator(bookNameXpath).first().textContent()
+            const exName = path.extname(src)
+
+            const imagePath = path.join(
+                this.dataPath,
+                this.scraperName,
+                "image",
+                `${this.isbn}-${bookName}${exName}`
+            )
+            this.logger.debug({ imagePath }, "saveImage")
             await Bun.write(imagePath, arrayBuffer);
             return true
         }
@@ -158,12 +182,25 @@ export class kyoboScraper implements BookScraper {
         return specUrl || ""
     }
     async extractData(): Promise<ScrapData> {
-        return {
-            toc: await this.getToc(),
-            recommendation: await this.getRecommendation(),
-            description: await this.getDescription(),
+        const urlXpath = "meta[property='og:url']"
+        const url = await this.page.locator(urlXpath).first().getAttribute("content")
+        const toc = await this.getToc()
+        const recommendation = await this.getRecommendation()
+        const description = await this.getDescription()
+
+        this.logger.debug({
+            toc: toc.length,
+            recommendation: recommendation.length,
+            description: description.length,
             source: this.scraperName,
-            url: this.page.url()
+            url
+        }, "extractData")
+        return {
+            toc,
+            recommendation,
+            description,
+            source: this.scraperName,
+            url: url || ""
         }
 
     }
