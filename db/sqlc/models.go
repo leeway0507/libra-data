@@ -19,6 +19,10 @@ type Book struct {
 	Volume          pgtype.Text
 	Imageurl        pgtype.Text
 	Bookdescription pgtype.Text
+	Recommendation  pgtype.Text
+	Toc             pgtype.Text
+	Scrapsource     pgtype.Text
+	Scrapurl        pgtype.Text
 }
 
 type Library struct {

@@ -28,6 +28,16 @@ VALUES (
 ON CONFLICT (ISBN) DO NOTHING
 RETURNING
     ID;
+-- name: UpdateScrapResult :exec
+UPDATE Books
+SET
+    BookDescription = $1,
+    Recommendation = $2,
+    Toc = $3,
+    ScrapSource = $4,
+    ScrapUrl = $5
+WHERE
+    isbn = $6;
 -- name: InsertLibsBooks :many
 INSERT INTO
     Libsbooks (
