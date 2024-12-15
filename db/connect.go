@@ -21,10 +21,6 @@ func ConnectPGPool(url string, ctx *context.Context) *pgxpool.Pool {
 		panic(err)
 	}
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
 	return pool
 
 }
