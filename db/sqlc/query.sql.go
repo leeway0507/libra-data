@@ -45,7 +45,7 @@ func (q *Queries) DeleteAllLibsBooksForTest(ctx context.Context) (int32, error) 
 }
 
 const getBooks = `-- name: GetBooks :many
-SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, bookdescription, recommendation, toc, scrapsource, scrapurl FROM Books
+SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, description, recommendation, toc, source, url FROM Books
 `
 
 func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
@@ -67,11 +67,11 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 			&i.Setisbn,
 			&i.Volume,
 			&i.Imageurl,
-			&i.Bookdescription,
+			&i.Description,
 			&i.Recommendation,
 			&i.Toc,
-			&i.Scrapsource,
-			&i.Scrapurl,
+			&i.Source,
+			&i.Url,
 		); err != nil {
 			return nil, err
 		}
@@ -94,7 +94,7 @@ INSERT INTO
         SetISBN,
         Volume,
         ImageURL,
-        BookDescription
+        Description
     )
 VALUES (
         $1,
@@ -121,7 +121,7 @@ type InsertBooksParams struct {
 	Setisbn         pgtype.Text
 	Volume          pgtype.Text
 	Imageurl        pgtype.Text
-	Bookdescription pgtype.Text
+	Description     pgtype.Text
 }
 
 func (q *Queries) InsertBooks(ctx context.Context, arg InsertBooksParams) ([]int32, error) {
@@ -134,7 +134,7 @@ func (q *Queries) InsertBooks(ctx context.Context, arg InsertBooksParams) ([]int
 		arg.Setisbn,
 		arg.Volume,
 		arg.Imageurl,
-		arg.Bookdescription,
+		arg.Description,
 	)
 	if err != nil {
 		return nil, err
@@ -222,31 +222,31 @@ func (q *Queries) InsertLibsBooks(ctx context.Context, arg InsertLibsBooksParams
 const updateScrapResult = `-- name: UpdateScrapResult :exec
 UPDATE Books
 SET
-    BookDescription = $1,
+    Description = $1,
     Recommendation = $2,
     Toc = $3,
-    ScrapSource = $4,
-    ScrapUrl = $5
+    Source = $4,
+    Url = $5
 WHERE
     isbn = $6
 `
 
 type UpdateScrapResultParams struct {
-	Bookdescription pgtype.Text
-	Recommendation  pgtype.Text
-	Toc             pgtype.Text
-	Scrapsource     pgtype.Text
-	Scrapurl        pgtype.Text
-	Isbn            pgtype.Text
+	Description    pgtype.Text
+	Recommendation pgtype.Text
+	Toc            pgtype.Text
+	Source         pgtype.Text
+	Url            pgtype.Text
+	Isbn           pgtype.Text
 }
 
 func (q *Queries) UpdateScrapResult(ctx context.Context, arg UpdateScrapResultParams) error {
 	_, err := q.db.Exec(ctx, updateScrapResult,
-		arg.Bookdescription,
+		arg.Description,
 		arg.Recommendation,
 		arg.Toc,
-		arg.Scrapsource,
-		arg.Scrapurl,
+		arg.Source,
+		arg.Url,
 		arg.Isbn,
 	)
 	return err

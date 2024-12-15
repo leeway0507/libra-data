@@ -8,11 +8,11 @@ CREATE TABLE Books (
     SetISBN VARCHAR(255),
     Volume VARCHAR(50),
     ImageURL VARCHAR(512),
-    BookDescription TEXT,
+    Description TEXT,
     Recommendation TEXT,
     Toc TEXT,
-    ScrapSource VARCHAR(50),
-    ScrapUrl VARCHAR(512)
+    Source VARCHAR(50),
+    Url VARCHAR(512)
 );
 
 CREATE TABLE Libraries (
