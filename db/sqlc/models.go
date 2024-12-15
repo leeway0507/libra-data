@@ -18,11 +18,11 @@ type Book struct {
 	Setisbn         pgtype.Text
 	Volume          pgtype.Text
 	Imageurl        pgtype.Text
-	Bookdescription pgtype.Text
+	Description     pgtype.Text
 	Recommendation  pgtype.Text
 	Toc             pgtype.Text
-	Scrapsource     pgtype.Text
-	Scrapurl        pgtype.Text
+	Source          pgtype.Text
+	Url             pgtype.Text
 }
 
 type Library struct {

@@ -1,10 +1,12 @@
 -- +goose Up
 -- +goose StatementBegin
 ALTER TABLE Books
+DROP BookDescription,
 ADD Toc TEXT,
 ADD Recommendation TEXT,
-ADD ScrapSource VARCHAR(50),
-ADD ScrapUrl VARCHAR(512);
+ADD Source VARCHAR(50),
+ADD Url VARCHAR(512),
+ADD Description TEXT;
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin

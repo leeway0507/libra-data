@@ -12,7 +12,7 @@ INSERT INTO
         SetISBN,
         Volume,
         ImageURL,
-        BookDescription
+        Description
     )
 VALUES (
         $1,
@@ -31,11 +31,11 @@ RETURNING
 -- name: UpdateScrapResult :exec
 UPDATE Books
 SET
-    BookDescription = $1,
+    Description = $1,
     Recommendation = $2,
     Toc = $3,
-    ScrapSource = $4,
-    ScrapUrl = $5
+    Source = $4,
+    Url = $5
 WHERE
     isbn = $6;
 -- name: InsertLibsBooks :many

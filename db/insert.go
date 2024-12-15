@@ -43,7 +43,7 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 			Setisbn:         pgtype.Text{String: book.SetISBN13, Valid: true},
 			Volume:          pgtype.Text{String: book.Vol, Valid: true},
 			Imageurl:        pgtype.Text{Valid: true},
-			Bookdescription: pgtype.Text{Valid: true},
+			Description:     pgtype.Text{Valid: true},
 		}
 		bookDB = append(bookDB, book)
 	}
