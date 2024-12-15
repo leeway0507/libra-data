@@ -6,12 +6,14 @@ import {
 } from "./book-scraper"
 
 async function main() {
-    const targetIsbns = await loadTargets().then((a) => a.slice(0, 40))
-    const scrapResult = await scrapIsbns(targetIsbns, 4)
-    const resultIsbns = await saveScrapResult(scrapResult)
+    for (let index = 0; index < 1; index++) {
+        const targetIsbns = await loadTargets().then((a) => a.slice(0, 25))
+        const scrapResult = await scrapIsbns(targetIsbns, 8, true)
+        const resultIsbns = await saveScrapResult(scrapResult)
 
-    console.log("scrap Length :", resultIsbns.length)
-    await updateTargetResult(targetIsbns, resultIsbns)
+        console.log("scrap Length :", resultIsbns.length)
+        await updateTargetResult(targetIsbns, resultIsbns)
+    }
 }
 
 main()
