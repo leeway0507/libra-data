@@ -6,6 +6,7 @@ require (
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/schollz/progressbar/v3 v3.17.1
+	golang.org/x/exp v0.0.0-20241210194714-1829a127f884
 	golang.org/x/text v0.21.0
 )
 
