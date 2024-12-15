@@ -54,7 +54,7 @@ func DropTestTable(conn *pgx.Conn, ctx context.Context) error {
 	for idx := range parts {
 		trimmed := strings.Split(parts[len(parts)-(idx+1)], "(")[0]
 		if trimmed != "" {
-			dropQuery := "DROP TABLE " + trimmed + ";"
+			dropQuery := "DROP TABLE IF EXISTS" + trimmed + ";"
 			_, err = conn.Exec(ctx, dropQuery)
 			if err != nil {
 				return err
