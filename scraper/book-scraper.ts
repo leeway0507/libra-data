@@ -5,7 +5,6 @@ import fsAsync from "fs/promises"
 import pino, { type Logger } from "pino"
 import pretty from "pino-pretty"
 import { format } from "date-fns"
-import * as csv from "fast-csv"
 
 const SEARCH_URL =
     "https://search.kyobobook.co.kr/search?gbCode=TOT&target=total"
@@ -54,9 +53,11 @@ function addStatusColumn(csvArr: string[]): string[] {
 
 export async function scrapIsbns(
     isbns: string[],
-    numWorker: number
+    numWorker: number,
+    headless: boolean = false
 ): Promise<ScrapData[]> {
-    const ctx = await initBrowser()
+    const ctx = await initBrowser(headless)
+    ctx.setDefaultTimeout(10000)
     const chunck = Math.ceil(isbns.length / numWorker)
     const isbnsChunk = Array(numWorker)
         .fill("")
@@ -73,6 +74,7 @@ export async function scrapIsbns(
     const result = await Promise.all(
         workers.map((worker, idx) => worker.execAll(isbnsChunk[idx]))
     )
+    await ctx.close()
     return result.flat(1).filter((x) => x != null)
 }
 
@@ -189,6 +191,7 @@ export class kyoboScraper implements BookScraper {
         const isWebLoaded = await this.loadWebSpecPage()
         if (isWebLoaded) {
             this.logger.debug("web html loaded")
+            await Bun.sleep(randomNumber(3, 5) * 1000)
             return true
         }
         return false
@@ -234,6 +237,10 @@ export class kyoboScraper implements BookScraper {
 
         if (!isFileExist) {
             const html = await this.page.content()
+            if (html === "<html><head></head><body></body></html>") {
+                this.logger.error({ error: "html is empty" }, "saveHtml")
+                return
+            }
             return await Bun.write(Bun.file(localFilePath), html)
         }
     }
@@ -338,4 +345,9 @@ export class kyoboScraper implements BookScraper {
         const loc = this.page.locator(descXpath)
         return ((await loc.count()) && (await loc.innerText())) || ""
     }
+}
+
+
+function randomNumber(min: number, max: number) {
+    return Math.random() * (max - min) + min;
 }
