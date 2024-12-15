@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/exp/slices"
 )
 
 func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
@@ -35,7 +36,7 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 	for _, book := range bookJson {
 		book := sqlc.InsertBooksParams{
 			Title:           pgtype.Text{String: book.Bookname, Valid: true},
-			Author:          pgtype.Text{String: book.Authors, Valid: true},
+			Author:          pgtype.Text{String: book.Authors[0:slices.Min([]int{512, len(book.Authors)})], Valid: true},
 			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
 			Publicationyear: pgtype.Text{String: book.PublicationYear, Valid: true},
 			Isbn:            pgtype.Text{String: book.ISBN13, Valid: true},

@@ -28,7 +28,7 @@ func GetAllBooksFromLib(libCode int, startDate string, endDate string) error {
 		return err
 	}
 	totalPage := ceilDiv(initResp.NumFound, pageSize)
-	fmt.Printf("total book count : %v \n", initResp.NumFound)
+	fmt.Printf("total book count : %v \t", initResp.NumFound)
 	fmt.Printf("Planned Request Page : %v \n", totalPage)
 
 	folderName := strings.Join([]string{startDate, endDate, strconv.Itoa(pageSize), strconv.Itoa(totalPage)}, "-")
