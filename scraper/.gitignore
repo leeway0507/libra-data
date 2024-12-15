@@ -175,5 +175,6 @@ dist
 .DS_Store
 env.ts
 /temp
+/data 
 
 scrapLogger.log
