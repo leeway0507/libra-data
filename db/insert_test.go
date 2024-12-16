@@ -16,14 +16,6 @@ func Test_Insert(t *testing.T) {
 	ctx := context.Background()
 	conn := ConnectPG(config.DATABASE_TEST_URL, ctx)
 	defer conn.Close(ctx)
-	err := DropTestTable(conn, ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = CreateTestTable(conn, ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	testQuery := sqlc.New(conn)
 	defaultPath := "/Users/yangwoolee/repo/libra-data/data/test"
@@ -64,7 +56,6 @@ func Test_Insert(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
 	})
 
 }

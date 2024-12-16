@@ -83,6 +83,32 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 	return items, nil
 }
 
+const getBooksFromIsbn = `-- name: GetBooksFromIsbn :one
+SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, description, recommendation, toc, source, url FROM Books WHERE isbn = $1
+`
+
+func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book, error) {
+	row := q.db.QueryRow(ctx, getBooksFromIsbn, isbn)
+	var i Book
+	err := row.Scan(
+		&i.ID,
+		&i.Isbn,
+		&i.Title,
+		&i.Author,
+		&i.Publisher,
+		&i.Publicationyear,
+		&i.Setisbn,
+		&i.Volume,
+		&i.Imageurl,
+		&i.Description,
+		&i.Recommendation,
+		&i.Toc,
+		&i.Source,
+		&i.Url,
+	)
+	return i, err
+}
+
 const insertBooks = `-- name: InsertBooks :many
 INSERT INTO
     Books (
