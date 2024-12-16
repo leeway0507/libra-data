@@ -348,6 +348,6 @@ export class kyoboScraper implements BookScraper {
 }
 
 
-function randomNumber(min: number, max: number) {
+export function randomNumber(min: number, max: number) {
     return Math.random() * (max - min) + min;
 }
