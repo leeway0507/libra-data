@@ -85,7 +85,6 @@ describe("book scraper", async () => {
     it("should extract bookinfo", async () => {
         await scraper.page.goto(specPath)
 
-        // console.log(await scraper.extractData())
         expectTypeOf(await scraper.extractData()).toMatchTypeOf({
             isbn: "string",
             toc: "string",
