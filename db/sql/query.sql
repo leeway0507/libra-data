@@ -1,6 +1,9 @@
 -- name: GetBooks :many
 SELECT * FROM Books;
 
+-- name: GetBooksFromIsbn :one
+SELECT * FROM Books WHERE isbn = $1;
+
 -- name: InsertBooks :many
 INSERT INTO
     Books (
