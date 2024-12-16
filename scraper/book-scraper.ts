@@ -57,7 +57,7 @@ export async function scrapIsbns(
     headless: boolean = false
 ): Promise<ScrapData[]> {
     const ctx = await initBrowser(headless)
-    ctx.setDefaultTimeout(10000)
+    ctx.setDefaultTimeout(20000)
     const chunck = Math.ceil(isbns.length / numWorker)
     const isbnsChunk = Array(numWorker)
         .fill("")
@@ -122,6 +122,17 @@ export type ScrapData = {
     url: string
 }
 
+interface BookScraper {
+    exec(): Promise<ScrapData | null>
+    loadSpecPage(): Promise<[Boolean, "local" | "web" | null]>
+    loadLocalSpecPage(): Promise<boolean>
+    loadWebSpecPage(): Promise<boolean>
+    saveHtml(): void
+    saveImage(): Promise<boolean>
+    searchBook(searchURL: string): Promise<string>
+    extractData(): Promise<ScrapData>
+}
+
 const LoggingFile = pino.destination({
     dest: path.join(__dirname, "scraplogger.log"),
     append: "stack",
@@ -138,22 +149,13 @@ const LoggerInstance: Logger = pino(
     ])
 )
 
-interface BookScraper {
-    exec(): Promise<ScrapData | null>
-    loadSpecPage(): void
-    loadLocalSpecPage(): Promise<boolean>
-    loadWebSpecPage(): Promise<boolean>
-    saveHtml(): void
-    saveImage(): Promise<boolean>
-    searchBook(searchURL: string): Promise<string>
-    extractData(): Promise<ScrapData>
-}
+
 
 export class kyoboScraper implements BookScraper {
     page!: Page
     isbn!: string
     scraperName = "kyobo"
-    dataPath = "/Users/yangwoolee/repo/libra-data/scraper/temp/html"
+    dataPath = "/Users/yangwoolee/repo/libra-data/scraper/temp"
     logger = LoggerInstance
 
     constructor(page: Page) {
@@ -171,35 +173,36 @@ export class kyoboScraper implements BookScraper {
     }
 
     async exec(): Promise<ScrapData | null> {
-        const isSpecPageLoaded = await this.loadSpecPage()
+        const [isSpecPageLoaded, loadType] = await this.loadSpecPage()
         if (!isSpecPageLoaded) {
             this.logger.error(`${this.isbn} not found!`)
             return null
         }
-        await this.saveHtml()
-        await this.saveImage()
+        loadType === "web" && await this.saveHtml()
+        loadType === "web" && await this.saveImage()
         return await this.extractData()
     }
 
-    async loadSpecPage() {
+    async loadSpecPage(): Promise<[Boolean, "local" | "web" | null]> {
         const isLocalLoaded = await this.loadLocalSpecPage()
         if (isLocalLoaded) {
             this.logger.debug("local html loaded")
-            return true
+            return [true, "local"]
         }
 
         const isWebLoaded = await this.loadWebSpecPage()
         if (isWebLoaded) {
             this.logger.debug("web html loaded")
             await Bun.sleep(randomNumber(3, 5) * 1000)
-            return true
+            return [true, "web"]
         }
-        return false
+        return [false, null]
     }
     async loadLocalSpecPage(): Promise<boolean> {
         const localFilePath = path.join(
             this.dataPath,
             this.scraperName,
+            "html",
             this.isbn + ".html"
         )
         if (await Bun.file(localFilePath).exists()) {
@@ -227,6 +230,7 @@ export class kyoboScraper implements BookScraper {
         const localFilePath = path.join(
             this.dataPath,
             this.scraperName,
+            "html",
             `${this.isbn}.html`
         )
         this.logger.debug({ localFilePath }, "saveHtml")
@@ -260,19 +264,14 @@ export class kyoboScraper implements BookScraper {
         if (src) {
             const response = await fetch(src)
             const arrayBuffer = await response.arrayBuffer()
-
-            const bookNameXpath = "//span[@class='prod_title']"
-            const bookName = await this.page
-                .locator(bookNameXpath)
-                .first()
-                .textContent()
+            const bookName = await this.getBookName()
             const exName = path.extname(src)
 
             const imagePath = path.join(
                 this.dataPath,
                 this.scraperName,
                 "image",
-                `${this.isbn}-${bookName?.replace("/", "_")}${exName}`
+                `${this.isbn}-${bookName?.replaceAll("/", "_")}${exName}`
             )
             this.logger.debug({ imagePath }, "saveImage")
             await Bun.write(imagePath, arrayBuffer)
@@ -345,9 +344,16 @@ export class kyoboScraper implements BookScraper {
         const loc = this.page.locator(descXpath)
         return ((await loc.count()) && (await loc.innerText())) || ""
     }
+    async getBookName(): Promise<string> {
+        const bookNameXpath = "//span[@class='prod_title']"
+        const bookName = await this.page
+            .locator(bookNameXpath)
+            .first()
+            .textContent()
+        return bookName || ""
+    }
 }
 
-
 export function randomNumber(min: number, max: number) {
-    return Math.random() * (max - min) + min;
+    return Math.random() * (max - min) + min
 }

@@ -3,13 +3,13 @@ import {
     saveScrapResult,
     loadTargets,
     updateTargetResult,
-    randomNumber
+    randomNumber,
 } from "./book-scraper"
 
 async function main() {
     for (let index = 0; index < 1; index++) {
-        const targetIsbns = await loadTargets().then((a) => a.slice(0, randomNumber(40, 52)))
-        const scrapResult = await scrapIsbns(targetIsbns, 7, true)
+        const targetIsbns = await loadTargets().then((a) => a.slice(0, 8))
+        const scrapResult = await scrapIsbns(targetIsbns, 8, true)
         const resultIsbns = await saveScrapResult(scrapResult)
 
         console.log("scrap Length :", resultIsbns.length)
