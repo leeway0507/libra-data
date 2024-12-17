@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/pgvector/pgvector-go"
 )
 
 const insertBooks = `-- name: InsertBooks :many
@@ -80,6 +81,24 @@ func (q *Queries) InsertBooks(ctx context.Context, arg InsertBooksParams) ([]int
 		return nil, err
 	}
 	return items, nil
+}
+
+const insertEmbeddings = `-- name: InsertEmbeddings :exec
+
+INSERT INTO
+    Bookembedding (isbn, embedding)
+VALUES ($1, $2)
+ON CONFLICT (isbn) DO NOTHING
+`
+
+type InsertEmbeddingsParams struct {
+	Isbn      string
+	Embedding pgvector.Vector
+}
+
+func (q *Queries) InsertEmbeddings(ctx context.Context, arg InsertEmbeddingsParams) error {
+	_, err := q.db.Exec(ctx, insertEmbeddings, arg.Isbn, arg.Embedding)
+	return err
 }
 
 type InsertLibrariesParams struct {

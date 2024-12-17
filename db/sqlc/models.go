@@ -29,7 +29,7 @@ type Book struct {
 
 type Bookembedding struct {
 	ID        int32
-	Isbn      pgtype.Text
+	Isbn      string
 	Embedding pgvector.Vector
 }
 
