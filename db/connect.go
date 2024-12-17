@@ -3,11 +3,15 @@ package db
 import (
 	"context"
 	"fmt"
+	"libraData/config"
 	"os"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// package db 내에서 사용 가능
+var cfg *config.EnvConfig = config.GetEnvConfig()
 
 func ConnectPGPool(url string, ctx *context.Context) *pgxpool.Pool {
 

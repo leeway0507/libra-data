@@ -13,7 +13,9 @@ import (
 
 var ALREADY_UPDATED = "U"
 
-func UpdateScrapResultFromJSON(query *sqlc.Queries, ctx context.Context, isbnPath string) error {
+func UpdateScrapResultFromJson(query *sqlc.Queries, ctx context.Context) error {
+
+	isbnPath := filepath.Join(cfg.DATA_PATH, "isbn")
 	entries, err := os.ReadDir(isbnPath)
 	if err != nil {
 		return err
@@ -54,7 +56,7 @@ func UpdateScrapResultFromJSON(query *sqlc.Queries, ctx context.Context, isbnPat
 	return nil
 }
 
-func SeparateScrapResultByEachISBN(scrapPath string, targetPath string) error {
+func SeparateScrapResultByEachIsbn(scrapPath string, targetPath string) error {
 	// load scrap file
 	entries, err := os.ReadDir(scrapPath)
 	if err != nil {
@@ -95,4 +97,46 @@ func SeparateScrapResultByEachISBN(scrapPath string, targetPath string) error {
 		}
 	}
 	return err
+}
+
+func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
+	isbnPath := filepath.Join(cfg.DATA_PATH, "embedding")
+	entries, err := os.ReadDir(isbnPath)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		fileName := entry.Name()
+		_, isJson := strings.CutSuffix(fileName, ".json")
+		if !isJson {
+			log.Println("found not json file", fileName)
+			continue
+		}
+		if fileName[:1] == ALREADY_UPDATED {
+			log.Printf("%v already updated \n", fileName)
+			continue
+		}
+		file, err := os.Open(filepath.Join(isbnPath, fileName))
+		if err != nil {
+			return err
+		}
+		var JsonArr sqlc.UpdateScrapResultParams
+		b, err := io.ReadAll(file)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(b, &JsonArr); err != nil {
+			return err
+		}
+		if err = query.UpdateScrapResult(ctx, JsonArr); err != nil {
+			return err
+		}
+		err = os.Rename(filepath.Join(isbnPath, fileName),
+			filepath.Join(isbnPath, "U"+fileName))
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
 }
