@@ -9,6 +9,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.17.1
 	golang.org/x/exp v0.0.0-20241210194714-1829a127f884
 	golang.org/x/text v0.21.0
+	google.golang.org/protobuf v1.36.0
 )
 
 require (
