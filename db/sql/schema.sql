@@ -12,7 +12,15 @@ CREATE TABLE Books (
     Recommendation TEXT,
     Toc TEXT,
     Source VARCHAR(50),
-    Url VARCHAR(512)
+    Url VARCHAR(512),
+    VectorSearch BOOLEAN DEFAULT False
+);
+
+CREATE TABLE BookEmbedding (
+    ID SERIAL PRIMARY KEY,
+    ISBN VARCHAR(15),
+    embedding vector (1536),
+    FOREIGN KEY (ISBN) REFERENCES Books (ISBN) ON DELETE CASCADE
 );
 
 CREATE TABLE Libraries (

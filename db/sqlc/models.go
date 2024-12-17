@@ -6,6 +6,7 @@ package sqlc
 
 import (
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/pgvector/pgvector-go"
 )
 
 type Book struct {
@@ -23,6 +24,13 @@ type Book struct {
 	Toc             pgtype.Text
 	Source          pgtype.Text
 	Url             pgtype.Text
+	Vectorsearch    pgtype.Bool
+}
+
+type Bookembedding struct {
+	ID        int32
+	Isbn      pgtype.Text
+	Embedding pgvector.Vector
 }
 
 type Library struct {
