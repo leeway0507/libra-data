@@ -11,10 +11,10 @@ import (
 )
 
 func Test_Update(t *testing.T) {
-	config := config.GetEnvConfig()
+	config.SetTestEnvConfig(cfg)
 
 	ctx := context.Background()
-	conn := ConnectPG(config.DATABASE_TEST_URL, ctx)
+	conn := ConnectPG(cfg.DATABASE_TEST_URL, ctx)
 	defer conn.Close(ctx)
 
 	err := InitTestTable(conn, ctx)
@@ -22,15 +22,14 @@ func Test_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 	testQuery := sqlc.New(conn)
-	defaultPath := "/Users/yangwoolee/repo/libra-data/data/test"
 
 	t.Run("update scrap result", func(t *testing.T) {
-		isbnPath := filepath.Join(defaultPath, "isbn")
-		err := UpdateScrapResultFromJSON(testQuery, ctx, isbnPath)
+		isbnPath := filepath.Join(cfg.DATA_PATH, "isbn")
+		err := UpdateScrapResultFromJson(testQuery, ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		entries, err := os.ReadDir(isbnPath)
+		entries, err := os.ReadDir(filepath.Join(cfg.DATA_PATH, "isbn"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +56,7 @@ func Test_Update(t *testing.T) {
 	t.Run("separate scrap result", func(t *testing.T) {
 		const targetPath = "/Users/yangwoolee/repo/libra-data/data/test/scrap/kyobo"
 		const savePath = "/Users/yangwoolee/repo/libra-data/data/test/isbn"
-		err := SeparateScrapResultByEachISBN(targetPath, savePath)
+		err := SeparateScrapResultByEachIsbn(targetPath, savePath)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -9,7 +9,7 @@ import (
 )
 
 func Test_Connect(t *testing.T) {
-	config.GetEnvConfig()
+	config.SetTestEnvConfig(cfg)
 
 	t.Run("test", func(t *testing.T) {
 		var cfg config.EnvConfig
