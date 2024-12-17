@@ -67,3 +67,10 @@ VALUES (
         $9,
         $10
     );
+
+-- name: InsertEmbeddings :exec
+
+INSERT INTO
+    Bookembedding (isbn, embedding)
+VALUES ($1, $2)
+ON CONFLICT (isbn) DO NOTHING;

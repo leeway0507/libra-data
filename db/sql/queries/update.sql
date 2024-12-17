@@ -9,6 +9,6 @@ SET
 WHERE
     isbn = $6;
 
--- name: UpdateVectorSearch :exec
+-- name: UpdateVectorSearchStatus :exec
 
 UPDATE books SET vectorsearch = $1 WHERE isbn = $2;
