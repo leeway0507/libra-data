@@ -11,7 +11,7 @@ func TestCollectData(t *testing.T) {
 	var bookItems *[]BookItemsDoc
 
 	t.Run("Get and preprocess and save lib", func(t *testing.T) {
-		resp, err := GetBookItems(111015, "2024-01-01", "2024-11-30", 1, 500)
+		resp, err := GetBookItems(111015, "2024-01-01", "2024-11-30", 1, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -27,9 +27,12 @@ func TestCollectData(t *testing.T) {
 	t.Run("Get Lib books", func(t *testing.T) {
 		// today := time.Now().Format(time.DateOnly)
 
-		_, err := GetBookItems(111015, "2024-01-01", "2024-11-30", 1, 1)
+		resp, err := GetBookItems(111015, "2024-01-01", "2024-11-30", 1, 1)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if len(resp.Docs) == 0 {
+			t.Fatalf("Request Denied : %+v", resp)
 		}
 	})
 
