@@ -13,8 +13,7 @@ import (
 
 var ALREADY_UPDATED = "U"
 
-func UpdateScrapResultFromJson(query *sqlc.Queries, ctx context.Context) error {
-
+func UpdateScrapDataFromJson(query *sqlc.Queries, ctx context.Context) error {
 	isbnPath := filepath.Join(cfg.DATA_PATH, "isbn")
 	entries, err := os.ReadDir(isbnPath)
 	if err != nil {
@@ -35,7 +34,7 @@ func UpdateScrapResultFromJson(query *sqlc.Queries, ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		var JsonArr sqlc.UpdateScrapResultParams
+		var JsonArr sqlc.UpdateScrapDataParams
 		b, err := io.ReadAll(file)
 		if err != nil {
 			return err
@@ -43,7 +42,7 @@ func UpdateScrapResultFromJson(query *sqlc.Queries, ctx context.Context) error {
 		if err = json.Unmarshal(b, &JsonArr); err != nil {
 			return err
 		}
-		if err = query.UpdateScrapResult(ctx, JsonArr); err != nil {
+		if err = query.UpdateScrapData(ctx, JsonArr); err != nil {
 			return err
 		}
 		err = os.Rename(filepath.Join(isbnPath, fileName),
@@ -56,7 +55,7 @@ func UpdateScrapResultFromJson(query *sqlc.Queries, ctx context.Context) error {
 	return nil
 }
 
-func SeparateScrapResultByEachIsbn(scrapPath string, targetPath string) error {
+func DistributeScrapDatasByIsbn(scrapPath string, targetPath string) error {
 	// load scrap file
 	entries, err := os.ReadDir(scrapPath)
 	if err != nil {
@@ -67,7 +66,7 @@ func SeparateScrapResultByEachIsbn(scrapPath string, targetPath string) error {
 		if err != nil {
 			return err
 		}
-		var JsonArr []sqlc.UpdateScrapResultParams
+		var JsonArr []sqlc.UpdateScrapDataParams
 		b, err := io.ReadAll(file)
 		if err != nil {
 			return err
@@ -120,7 +119,7 @@ func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		var JsonArr sqlc.UpdateScrapResultParams
+		var JsonArr sqlc.UpdateScrapDataParams
 		b, err := io.ReadAll(file)
 		if err != nil {
 			return err
@@ -128,7 +127,7 @@ func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
 		if err = json.Unmarshal(b, &JsonArr); err != nil {
 			return err
 		}
-		if err = query.UpdateScrapResult(ctx, JsonArr); err != nil {
+		if err = query.UpdateScrapData(ctx, JsonArr); err != nil {
 			return err
 		}
 		err = os.Rename(filepath.Join(isbnPath, fileName),
@@ -136,7 +135,6 @@ func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

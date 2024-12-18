@@ -25,7 +25,7 @@ func Test_Update(t *testing.T) {
 
 	t.Run("update scrap result", func(t *testing.T) {
 		isbnPath := filepath.Join(cfg.DATA_PATH, "isbn")
-		err := UpdateScrapResultFromJson(testQuery, ctx)
+		err := UpdateScrapDataFromJson(testQuery, ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,7 +56,7 @@ func Test_Update(t *testing.T) {
 	t.Run("separate scrap result", func(t *testing.T) {
 		const targetPath = "/Users/yangwoolee/repo/libra-data/data/test/scrap/kyobo"
 		const savePath = "/Users/yangwoolee/repo/libra-data/data/test/isbn"
-		err := SeparateScrapResultByEachIsbn(targetPath, savePath)
+		err := DistributeScrapDatasByIsbn(targetPath, savePath)
 		if err != nil {
 			t.Fatal(err)
 		}

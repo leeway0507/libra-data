@@ -1,4 +1,4 @@
--- name: UpdateScrapResult :exec
+-- name: UpdateScrapData :exec
 UPDATE Books
 SET
     Description = $1,

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const updateScrapResult = `-- name: UpdateScrapResult :exec
+const updateScrapData = `-- name: UpdateScrapData :exec
 UPDATE Books
 SET
     Description = $1,
@@ -23,7 +23,7 @@ WHERE
     isbn = $6
 `
 
-type UpdateScrapResultParams struct {
+type UpdateScrapDataParams struct {
 	Description    pgtype.Text
 	Recommendation pgtype.Text
 	Toc            pgtype.Text
@@ -32,8 +32,8 @@ type UpdateScrapResultParams struct {
 	Isbn           pgtype.Text
 }
 
-func (q *Queries) UpdateScrapResult(ctx context.Context, arg UpdateScrapResultParams) error {
-	_, err := q.db.Exec(ctx, updateScrapResult,
+func (q *Queries) UpdateScrapData(ctx context.Context, arg UpdateScrapDataParams) error {
+	_, err := q.db.Exec(ctx, updateScrapData,
 		arg.Description,
 		arg.Recommendation,
 		arg.Toc,
