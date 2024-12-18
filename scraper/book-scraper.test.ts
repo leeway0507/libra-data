@@ -1,15 +1,10 @@
-import {
-    kyoboScraper,
-    initBrowser,
-    scrapIsbns,
-    updateTargetResult,
-} from "./book-scraper"
+import { kyoboScraper, initBrowser, scrapIsbns, updateTargetResult } from "./book-scraper"
 import { expectTypeOf } from "expect-type"
 import path from "path"
 import { describe, test as it, expect } from "bun:test"
 import fsSync from "fs"
 
-describe("multi page scrap", () => {
+describe("multi page scrap using book scraper", () => {
     it(
         "should execute multi page ",
         async () => {
@@ -48,7 +43,7 @@ describe("book scraper", async () => {
         "should loadSpecPage ",
         async () => {
             const isloaded = await scraper.loadSpecPage()
-            expect(isloaded).toBe(true)
+            expect(isloaded[0]).toBe(true)
         },
         { timeout: 10_000 }
     )
@@ -57,11 +52,7 @@ describe("book scraper", async () => {
         await scraper.page.goto(specPath)
         await scraper.saveHtml()
 
-        const localFilePath = path.join(
-            scraper.dataPath,
-            scraper.scraperName,
-            scraper.isbn + ".html"
-        )
+        const localFilePath = path.join(scraper.dataPath, scraper.scraperName, scraper.isbn + ".html")
         expect(fsSync.existsSync(localFilePath)).toBe(true)
         // if (fsSync.existsSync(localFilePath)) {
         //     fsSync.rmSync(localFilePath)
@@ -97,18 +88,13 @@ describe("book scraper", async () => {
 
     it("should searchBook ", async () => {
         const url = await scraper.searchBook(searchPath)
-        expect(url).toEqual(
-            "https://product.kyobobook.co.kr/detail/S000202532365"
-        )
+        expect(url).toEqual("https://product.kyobobook.co.kr/detail/S000202532365")
     })
 
     it("should get Recommendation ", async () => {
         await scraper.page.goto(specPath)
         expect((await scraper.getRecommendation()).length).toBeGreaterThan(0)
-        console.log(
-            "getRecommendation",
-            (await scraper.getRecommendation()).length
-        )
+        console.log("getRecommendation", (await scraper.getRecommendation()).length)
     })
 
     it("should get Toc ", async () => {
