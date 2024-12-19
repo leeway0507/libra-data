@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package= "./pb";
+
+
+message EmbeddingVector {
+  string isbn = 1;
+  repeated float embedding = 2;  
+}
+message BookRow {
+  string isbn = 1;
+  string title = 2;
+  string author =3;
+  string publisher =4;
+  string publicationYear=5;
+  string setIsbn=6;
+  string volume=7;
+  string classNum=8;
+}
+message BookRows {
+  repeated BookRow books = 1; 
+}
+
+// generate code  : protoc --go_out=. libra-data.proto
+

@@ -8,7 +8,7 @@ import (
 	"io"
 	"libraData/config"
 	"libraData/db/sqlc"
-	"libraData/embedding/pb"
+	"libraData/pb"
 	"log"
 	"net/http"
 	"os"
