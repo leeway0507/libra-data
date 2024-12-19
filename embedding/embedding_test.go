@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"libraData/config"
 	"libraData/db"
 	"libraData/db/sqlc"
 	"os"
@@ -13,28 +14,29 @@ import (
 )
 
 func TestEmebedding(t *testing.T) {
-
+	cfg := config.GetEnvConfig()
 	ctx := context.Background()
 	conn := db.ConnectPG(cfg.DATABASE_TEST_URL, ctx)
-	cfg.DATA_PATH = filepath.Join(cfg.DATA_PATH, "test")
 	defer conn.Close(ctx)
 
-	// db.InitTestTable(conn, ctx)
+	testDataPath := filepath.Join(cfg.DATA_PATH, "test", "embedding")
 
 	testQuery := sqlc.New(conn)
+	req := NewReq(testQuery, cfg.OPEN_AI_API_KEY, testDataPath)
 	t.Run("load", func(t *testing.T) {
-		data := LoadDataForEmbedding(testQuery)
+		data := req.LoadBookData()
 		if len(data) == 0 {
 			t.Fatal("data length is 0")
 		}
 	})
+
 	// t.Run("request embedding", func(t *testing.T) {
 	// 	data := Load(testQuery)
 	// 	RequestEmbedding(data[0])
 	// })
 
 	t.Run("save", func(t *testing.T) {
-		file, err := os.Open(filepath.Join(cfg.DATA_PATH, "embedding", "openai_resp.json"))
+		file, err := os.Open(filepath.Join(testDataPath, "openai_resp.json"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,12 +53,12 @@ func TestEmebedding(t *testing.T) {
 			Embedding: openAIresp.Data[0].Embedding,
 		}
 
-		if err = SaveEmbeddingData(vectors); err != nil {
+		if err = req.SaveEmbeddingResp(vectors); err != nil {
 			t.Fatal(err)
 		}
 	})
 	t.Run("load embedding", func(t *testing.T) {
-		_, err := LoadEmbeddingData("9791138337526")
+		_, err := req.LoadEmbeddingData("9791138337526")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -64,12 +66,13 @@ func TestEmebedding(t *testing.T) {
 	})
 
 	t.Run("update scrap result", func(t *testing.T) {
-		embedding := filepath.Join(cfg.DATA_PATH, "embedding")
-		err := UpdateEmbeddingFromPB(testQuery, ctx)
+		conn.Exec(ctx, "DELETE FROM bookembedding")
+		embedding := filepath.Join(testDataPath)
+		err := req.InsertToDB()
 		if err != nil {
 			t.Fatal(err)
 		}
-		entries, err := os.ReadDir(filepath.Join(cfg.DATA_PATH, "embedding"))
+		entries, err := os.ReadDir(filepath.Join(testDataPath))
 		if err != nil {
 			t.Fatal(err)
 		}

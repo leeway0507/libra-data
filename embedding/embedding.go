@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData/config"
 	"libraData/db/sqlc"
 	"libraData/pb"
 	"log"
@@ -20,8 +19,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var cfg config.EnvConfig = *config.GetEnvConfig()
-var maxTokenSize = 10
+const ALREADY_UPDATED = "U"
+const maxTokenSize = 10
 
 type Vector struct {
 	Isbn   string
@@ -52,16 +51,35 @@ type ResponseEmbedding struct {
 	Embedding []float32
 }
 
-func LoadDataForEmbedding(query *sqlc.Queries) []sqlc.ExtractBooksForEmbeddingRow {
+type req struct {
+	query     *sqlc.Queries
+	openAIKey string
+	dataPath  string
+}
+
+func NewReq(query *sqlc.Queries, openAIKey string, dataPath string) *req {
+	return &req{
+		query,
+		openAIKey,
+		dataPath,
+	}
+}
+
+type DB struct {
+	Isbn      string
+	Embedding []float32
+}
+
+func (R *req) LoadBookData() []sqlc.ExtractBooksForEmbeddingRow {
 	ctx := context.Background()
-	data, err := query.ExtractBooksForEmbedding(ctx)
+	data, err := R.query.ExtractBooksForEmbedding(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return data
 }
 
-func RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*ResponseEmbedding, error) {
+func (R *req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*ResponseEmbedding, error) {
 	runes := []rune(data.Title.String +
 		data.Description.String +
 		data.Toc.String +
@@ -82,7 +100,7 @@ func RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*ResponseEmbedding
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+cfg.OPEN_AI_API_KEY)
+	req.Header.Set("Authorization", "Bearer "+R.openAIKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -105,7 +123,7 @@ func RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*ResponseEmbedding
 	}, nil
 }
 
-func PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) (*[]byte, error) {
+func (R *req) PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) (*[]byte, error) {
 	runes := []rune(data.Title.String +
 		data.Description.String +
 		data.Toc.String +
@@ -123,13 +141,13 @@ func PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) (*[]byt
 	return &reqBodyByte, nil
 }
 
-func SaveEmbeddingData(resp *ResponseEmbedding) error {
+func (R *req) SaveEmbeddingResp(resp *ResponseEmbedding) error {
 	embeddingpb := &pb.EmbeddingVector{
 		Embedding: resp.Embedding,
 		Isbn:      resp.Isbn,
 	}
 
-	file, err := os.Create(filepath.Join(cfg.DATA_PATH, "embedding", resp.Isbn+".pb"))
+	file, err := os.Create(filepath.Join(R.dataPath, resp.Isbn+".pb"))
 	if err != nil {
 		fmt.Println("file open error", err)
 		return err
@@ -143,8 +161,8 @@ func SaveEmbeddingData(resp *ResponseEmbedding) error {
 	return nil
 }
 
-func LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
-	file, err := os.Open(filepath.Join(cfg.DATA_PATH, "embedding", isbn+".pb"))
+func (R *req) LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
+	file, err := os.Open(filepath.Join(R.dataPath, isbn+".pb"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +181,9 @@ func LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
 	return embeddingVector, nil
 }
 
-func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
-	embeddingPath := filepath.Join(cfg.DATA_PATH, "embedding")
+func (R *req) InsertToDB() error {
+
+	embeddingPath := filepath.Join(R.dataPath)
 	entries, err := os.ReadDir(embeddingPath)
 	if err != nil {
 		return err
@@ -176,8 +195,12 @@ func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
 			log.Println("found non PB file", fileName)
 			continue
 		}
+		if isbn[:1] == ALREADY_UPDATED {
+			log.Printf("%v is already upldated", fileName)
+			continue
+		}
 
-		data, err := LoadEmbeddingData(isbn)
+		data, err := R.LoadEmbeddingData(isbn)
 		if err != nil {
 			log.Printf("loadembedding Error : %v \n", isbn)
 			log.Println("move onto next data...")
@@ -187,17 +210,18 @@ func UpdateEmbeddingFromPB(query *sqlc.Queries, ctx context.Context) error {
 			Isbn:      isbn,
 			Embedding: pgvector.NewVector(data.Embedding),
 		}
-		fmt.Println()
-		err = query.InsertEmbeddings(ctx, embeddingArgs)
+
+		ctx := context.Background()
+		err = R.query.InsertEmbeddings(ctx, embeddingArgs)
 		if err != nil {
-			return fmt.Errorf("insertEmbeddings %v \n error: %v", isbn, err)
+			return fmt.Errorf("insertEmbeddings %v \n \n error: %v", isbn, err)
 		}
 		vectorStatusArgs := sqlc.UpdateVectorSearchStatusParams{
 			Isbn:         pgtype.Text{String: isbn, Valid: true},
 			Vectorsearch: pgtype.Bool{Bool: true, Valid: true},
 		}
 
-		err = query.UpdateVectorSearchStatus(ctx, vectorStatusArgs)
+		err = R.query.UpdateVectorSearchStatus(ctx, vectorStatusArgs)
 		if err != nil {
 			return fmt.Errorf("updateVectorSearchStatus : %v \n error: %v", isbn, err)
 

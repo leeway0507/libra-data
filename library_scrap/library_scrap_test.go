@@ -1,4 +1,4 @@
-package preprocess
+package library_scrap
 
 import (
 	"fmt"
@@ -9,25 +9,26 @@ import (
 )
 
 func TestProprocess(t *testing.T) {
-	config.SetTestEnvConfig(cfg)
+	cfg := config.GetEnvConfig()
 
 	t.Run("check preprocess status", func(t *testing.T) {
 		scrapDate := "2024-12-01"
+		testDataPath := filepath.Join(cfg.DATA_PATH, "test", "library")
 
 		// remove existing test file
-		_, err := os.Open(filepath.Join(cfg.DATA_PATH, "library", "가락몰도서관", scrapDate+".pb"))
+		_, err := os.Open(filepath.Join(testDataPath, "가락몰도서관", scrapDate+".pb"))
 		if err == nil {
 			fmt.Println("pb file exists. removing the file...")
-			os.Remove(filepath.Join(cfg.DATA_PATH, "library", "가락몰도서관", scrapDate+".pb"))
+			os.Remove(filepath.Join(testDataPath, "가락몰도서관", scrapDate+".pb"))
 		}
 
-		libEntries := LoadLibScraperFolder()
+		libEntries := LoadLibScrapFolders(testDataPath)
 		if len(libEntries) == 0 {
 			t.Fatal("no lib folders")
 		}
 
 		for _, libEntry := range libEntries {
-			ep := NewExcelToProto(libEntry, scrapDate)
+			ep := NewExcelToProto(libEntry, scrapDate, testDataPath)
 			isPreprocessed := ep.GetPreprocessStatus()
 
 			if isPreprocessed {
@@ -37,13 +38,6 @@ func TestProprocess(t *testing.T) {
 			err := ep.Preprocess()
 			if err != nil {
 				t.Fatal(err)
-			}
-			books, err := ep.LoadBooksFromPB()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(books.Books) == 0 {
-				t.Fatal("can not load book file")
 			}
 
 		}

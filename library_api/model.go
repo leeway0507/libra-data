@@ -1,4 +1,4 @@
-package collect
+package library_api
 
 type BookItemsResponse struct {
 	Docs []struct {
