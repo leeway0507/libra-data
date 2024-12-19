@@ -51,7 +51,7 @@ func TestEmebedding(t *testing.T) {
 			Embedding: openAIresp.Data[0].Embedding,
 		}
 
-		if err = SaveEmbedding(vectors); err != nil {
+		if err = SaveEmbeddingData(vectors); err != nil {
 			t.Fatal(err)
 		}
 	})

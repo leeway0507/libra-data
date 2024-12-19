@@ -123,7 +123,7 @@ func PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) (*[]byt
 	return &reqBodyByte, nil
 }
 
-func SaveEmbedding(resp *ResponseEmbedding) error {
+func SaveEmbeddingData(resp *ResponseEmbedding) error {
 	embeddingpb := &pb.EmbeddingVector{
 		Embedding: resp.Embedding,
 		Isbn:      resp.Isbn,
