@@ -16,3 +16,5 @@ WHERE (
         b.vectorsearch is false
         and b.source is not null
     );
+-- name: GetLibCodFromLibName :one
+SELECT libcode FROM libraries WHERE libname = $1;

@@ -7,6 +7,7 @@ import (
 	"io"
 	"libraData/collect"
 	sqlc "libraData/db/sqlc"
+	"libraData/pb"
 	"libraData/utils"
 	"os"
 	"strconv"
@@ -15,7 +16,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
+func InsertLibBookBulkFromJSON(query *sqlc.Queries, ctx context.Context, jsonPath string) error {
 	f, err := os.Open(jsonPath)
 	if err != nil {
 		return err
@@ -34,9 +35,10 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 
 	var bookDB []sqlc.InsertBooksParams
 	for _, book := range bookJson {
+		authorRunes := []rune(book.Authors)
 		book := sqlc.InsertBooksParams{
 			Title:           pgtype.Text{String: book.Bookname, Valid: true},
-			Author:          pgtype.Text{String: book.Authors[0:slices.Min([]int{512, len(book.Authors)})], Valid: true},
+			Author:          pgtype.Text{String: string(authorRunes[0:slices.Min([]int{512, len(authorRunes)})]), Valid: true},
 			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
 			Publicationyear: pgtype.Text{String: book.PublicationYear, Valid: true},
 			Isbn:            pgtype.Text{String: book.ISBN13, Valid: true},
@@ -49,7 +51,7 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 	}
 
 	for _, book := range bookDB {
-		_, err := conn.InsertBooks(ctx, book)
+		_, err := query.InsertBooks(ctx, book)
 		if err != nil {
 			b, _ := json.Marshal(book)
 			fmt.Println(string(b))
@@ -59,7 +61,37 @@ func InsertLibBookBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 
 	return nil
 }
-func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string, libCode int32) error {
+func InsertLibBookBulkFromPB(query *sqlc.Queries, ctx context.Context, books []*pb.BookRow) error {
+	var bookDB []sqlc.InsertBooksParams
+	for _, book := range books {
+		authorRunes := []rune(book.Author)
+		book := sqlc.InsertBooksParams{
+			Title:           pgtype.Text{String: book.Title, Valid: true},
+			Author:          pgtype.Text{String: string(authorRunes[0:slices.Min([]int{512, len(authorRunes)})]), Valid: true},
+			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
+			Publicationyear: pgtype.Text{String: book.PublicationYear, Valid: true},
+			Isbn:            pgtype.Text{String: book.Isbn, Valid: true},
+			Setisbn:         pgtype.Text{String: book.SetIsbn, Valid: true},
+			Volume:          pgtype.Text{String: book.Volume, Valid: true},
+			Imageurl:        pgtype.Text{Valid: true},
+			Description:     pgtype.Text{Valid: true},
+		}
+		bookDB = append(bookDB, book)
+	}
+
+	for _, book := range bookDB {
+		_, err := query.InsertBooks(ctx, book)
+		if err != nil {
+			b, _ := json.Marshal(book)
+			fmt.Println(string(b))
+			return err
+		}
+	}
+
+	return nil
+}
+
+func InsertLibsBooksRelationBulkFromJSON(query *sqlc.Queries, ctx context.Context, jsonPath string, libCode int32) error {
 	f, err := os.Open(jsonPath)
 	if err != nil {
 		return err
@@ -100,7 +132,7 @@ func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context
 	}
 
 	for _, book := range bookDB {
-		_, err := conn.InsertLibsBooks(ctx, book)
+		_, err := query.InsertLibsBooks(ctx, book)
 		if err != nil {
 			return err
 		}
@@ -108,7 +140,28 @@ func InsertLibsBooksRelationBulkFromJSON(conn *sqlc.Queries, ctx context.Context
 
 	return nil
 }
-func InsertLibInfoBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath string) error {
+func InsertLibsBooksRelationBulkFromPB(query *sqlc.Queries, ctx context.Context, books []*pb.BookRow, libCode int32) error {
+
+	var bookDB []sqlc.InsertLibsBooksParams
+	for _, book := range books {
+		book := sqlc.InsertLibsBooksParams{
+			Libcode:  pgtype.Int4{Int32: libCode, Valid: true},
+			Isbn:     pgtype.Text{String: book.Isbn, Valid: true},
+			Classnum: pgtype.Text{String: book.ClassNum, Valid: true},
+		}
+		bookDB = append(bookDB, book)
+	}
+
+	for _, book := range bookDB {
+		_, err := query.InsertLibsBooks(ctx, book)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+func InsertLibInfoBulkFromJSON(query *sqlc.Queries, ctx context.Context, jsonPath string) error {
 	var rawData []map[string]string
 	file, err := utils.LoadFile(jsonPath)
 
@@ -160,7 +213,7 @@ func InsertLibInfoBulkFromJSON(conn *sqlc.Queries, ctx context.Context, jsonPath
 		libraries = append(libraries, library)
 	}
 
-	i, err := conn.InsertLibraries(ctx, libraries)
+	i, err := query.InsertLibraries(ctx, libraries)
 	if err != nil {
 		return err
 	}

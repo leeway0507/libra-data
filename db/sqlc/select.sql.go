@@ -125,3 +125,14 @@ func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book,
 	)
 	return i, err
 }
+
+const getLibCodFromLibName = `-- name: GetLibCodFromLibName :one
+SELECT libcode FROM libraries WHERE libname = $1
+`
+
+func (q *Queries) GetLibCodFromLibName(ctx context.Context, libname pgtype.Text) (pgtype.Int4, error) {
+	row := q.db.QueryRow(ctx, getLibCodFromLibName, libname)
+	var libcode pgtype.Int4
+	err := row.Scan(&libcode)
+	return libcode, err
+}
