@@ -67,7 +67,7 @@ describe("library scraper", async () => {
         async () => {
             const libArrMock = [
                 {
-                    libName: "서울특별시교육청양천도서관",
+                    libName: "가락몰도서관",
                     uploadDate: "2024-12-01",
                     nth: 0,
                 },
