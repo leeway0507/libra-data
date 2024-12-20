@@ -19,7 +19,7 @@ func Test_Connect(t *testing.T) {
 		}
 
 		ctx := context.Background()
-		conn := ConnectPGPool(cfg.DATABASE_URL, &ctx)
+		conn := ConnectPGPool(cfg.DATABASE_URL, ctx)
 
 		defer conn.Close()
 

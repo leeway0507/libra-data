@@ -13,14 +13,14 @@ import (
 // package db 내에서 사용 가능
 var cfg *config.EnvConfig = config.GetEnvConfig()
 
-func ConnectPGPool(url string, ctx *context.Context) *pgxpool.Pool {
+func ConnectPGPool(url string, ctx context.Context) *pgxpool.Pool {
 
 	fmt.Println("trying to connect to db : ", url)
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		panic(err)
 	}
-	pool, err := pgxpool.NewWithConfig(*ctx, config)
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		panic(err)
 	}
