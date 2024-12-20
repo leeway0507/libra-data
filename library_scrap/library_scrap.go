@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"libraData/db"
 	"libraData/db/sqlc"
 	"libraData/pb"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/xuri/excelize/v2"
@@ -35,54 +37,110 @@ var defaultColName []string = []string{
 	"등록일자",
 }
 
-func ConvertExcelToProto(scrapDate string, dataPath string) error {
+func ConvertExcelToProto(scrapDate string, dataPath string, workers int) error {
 	folders := LoadLibScrapFolders(dataPath)
 
-	for _, folder := range folders {
-		ep := NewExcelToProto(folder, scrapDate, dataPath)
-		isPreprocessed := ep.GetPreprocessStatus()
-		if isPreprocessed {
-			continue
-		}
-		err := ep.Preprocess()
-		if err != nil {
-			return err
-		}
+	// 채널을 통해 작업을 전달
+	tasks := make(chan os.DirEntry, len(folders))
+	errChan := make(chan error, workers)
+	var wg sync.WaitGroup
+
+	// 워커 풀 생성
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for folder := range tasks {
+				// fmt.Println(folder.Name(), "에 대해 작업 중..")
+				ep := NewExcelToProto(folder, scrapDate, dataPath)
+				requiresProcessing := ep.IsPreprocessingRequired()
+				fmt.Println(folder.Name(), "requiresProcessing", requiresProcessing)
+				if requiresProcessing {
+					err := ep.Preprocess()
+					if err != nil {
+						errChan <- err
+					}
+				}
+			}
+		}()
 	}
+
+	// 작업 채널에 작업 추가
+	for _, folder := range folders {
+		tasks <- folder
+	}
+	// 종료 신호
+	close(tasks)
+
+	wg.Wait()
 	return nil
 }
 
-func InsertAll(query *sqlc.Queries, dataPath string) {
-	const scrapData = "2024-12-01"
+func InsertAll(db_url string, dataPath string, scrapDate string, workers int) {
+
 	ctx := context.Background()
+	conn := db.ConnectPG(db_url, ctx)
+	defer conn.Close(ctx)
 
 	folders := LoadLibScrapFolders(dataPath)
 
-	for _, folder := range folders {
-		fmt.Println(folder.Name())
-		if !folder.IsDir() {
-			log.Printf("%s is not a dir. \n", folder.Name())
-			continue
-		}
-		dbInstance := NewDB(query, scrapData, filepath.Join(dataPath, folder.Name()))
-		data, err := dbInstance.Load()
-		if err != nil {
-			log.Fatalln(err)
-		}
-		err = dbInstance.InsertBooks(data.Books)
-		if err != nil {
-			log.Fatalln("InsertBooks : ", err.Error())
-		}
-		libCode, err := query.GetLibCodFromLibName(ctx, pgtype.Text{String: folder.Name(), Valid: true})
-		if err != nil {
-			log.Fatalln("GetLibCodFromLibName : ", err.Error())
-		}
-		err = dbInstance.InsertLibsBooks(data.Books, libCode.Int32)
-		if err != nil {
-			log.Fatalln("GetLibCodFromLibName : ", err.Error())
-		}
+	tasks := make(chan os.DirEntry, len(folders))
 
+	var wg sync.WaitGroup
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			q := sqlc.New(conn)
+
+			for folder := range tasks {
+				fmt.Println(i+1, "worker", folder.Name())
+				if !folder.IsDir() {
+					log.Printf("%s is not a dir. \n", folder.Name())
+					continue
+				}
+				specDataPath := filepath.Join(dataPath, folder.Name())
+				insert(q, scrapDate, specDataPath)
+			}
+		}()
 	}
+	// 작업 채널에 작업 추가
+	for _, folder := range folders {
+		tasks <- folder
+	}
+	// 종료 신호
+	close(tasks)
+	wg.Wait()
+}
+
+func insert(query *sqlc.Queries, scrapData string, dataPath string) {
+	ctx := context.Background()
+	dbInstance := NewDB(query, scrapData, dataPath)
+	data, err := dbInstance.Load()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if data == nil {
+		return
+	}
+	err = dbInstance.InsertBooks(data.Books)
+	if err != nil {
+		log.Fatalln("InsertBooks : ", err.Error())
+	}
+	libCode, err := query.GetLibCodFromLibName(ctx, pgtype.Text{String: filepath.Base(dataPath), Valid: true})
+	if err != nil {
+		log.Fatalln("GetLibCodFromLibName : ", err.Error())
+	}
+	err = dbInstance.InsertLibsBooks(data.Books, libCode.Int32)
+	if err != nil {
+		log.Fatalln("GetLibCodFromLibName : ", err.Error())
+	}
+	err = dbInstance.MarkAsUpdated()
+	if err != nil {
+		log.Fatalln("GetLibCodFromLibName : ", err.Error())
+	}
+
 }
 
 type excelToProto struct {
@@ -99,27 +157,35 @@ func NewExcelToProto(entry os.DirEntry, scrapDate string, dataPath string) *exce
 	}
 }
 
-func (ep *excelToProto) GetPreprocessStatus() bool {
+func (ep *excelToProto) IsPreprocessingRequired() bool {
 	if !ep.entry.IsDir() {
 		fmt.Printf("Unintened file %s \n", ep.entry.Name())
-		return true
+		return false
 	}
-	files, err := os.ReadDir(ep.dataPath)
+	folder, err := os.ReadDir(ep.dataPath)
 	if err != nil {
 		fmt.Printf("file does not exist in %s \n", ep.entry.Name())
-		return true
+		return false
 	}
 
-	for _, file := range files {
-		if file.Name() == ep.scrapDate+".pb" {
-			return true
-		}
-		if file.Name() == ep.scrapDate+".xlsx" {
+	for _, file := range folder {
+		pbList := []string{ep.scrapDate + ".pb", "U" + ep.scrapDate + ".pb"}
+		if slices.Contains(pbList, file.Name()) {
+			// err := os.Remove(filepath.Join(ep.dataPath, ep.scrapDate+".pb"))
+			// if err != nil {
+			// 	fmt.Println(err)
+			// }
+			// fmt.Println("removed")
 			return false
 		}
 	}
+	for _, file := range folder {
+		if file.Name() == ep.scrapDate+".xlsx" {
+			return true
+		}
+	}
 	fmt.Printf("%s does not exist in %s \n", ep.scrapDate+".xlsx", ep.entry.Name())
-	return true
+	return false
 }
 
 func (ep *excelToProto) Preprocess() error {
@@ -205,10 +271,11 @@ func NewDB(query *sqlc.Queries, scrapDate string, dataPath string) *DB {
 func (D *DB) Load() (*pb.BookRows, error) {
 	file, err := os.Open(filepath.Join(D.dataPath, D.scrapDate+".pb"))
 	if err != nil {
-		return nil, err
+		fmt.Println("Load :", err)
+		return nil, nil
 	}
-	defer file.Close()
 
+	defer file.Close()
 	bookRows := &pb.BookRows{} // 포인터 초기화
 	b, err := io.ReadAll(file)
 	if err != nil {
@@ -218,8 +285,8 @@ func (D *DB) Load() (*pb.BookRows, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return bookRows, nil
+
 }
 
 func (D *DB) InsertBooks(books []*pb.BookRow) error {
@@ -271,6 +338,15 @@ func (D *DB) InsertLibsBooks(books []*pb.BookRow, libCode int32) error {
 		}
 	}
 
+	return nil
+}
+
+func (D *DB) MarkAsUpdated() error {
+	err := os.Rename(filepath.Join(D.dataPath, D.scrapDate+".pb"),
+		filepath.Join(D.dataPath, "U"+D.scrapDate+".pb"))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

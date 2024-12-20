@@ -29,7 +29,7 @@ func TestProprocess(t *testing.T) {
 
 		for _, libEntry := range libEntries {
 			ep := NewExcelToProto(libEntry, scrapDate, testDataPath)
-			isPreprocessed := ep.GetPreprocessStatus()
+			isPreprocessed := ep.IsPreprocessingRequired()
 
 			if isPreprocessed {
 				continue
