@@ -11,16 +11,19 @@ async function scrapBookDataFromKyobo() {
         await updateTargetResult(targetIsbns, resultIsbns)
     }
 }
-async function scrapLibData() {
+async function scrapLibraryData() {
+
     const ctx = await initBrowser()
-    const page = await ctx.newPage()
-    const libScraperInstance = new LibScraper(ctx)
-    await libScraperInstance.getDataByPagination(page, 1)
+    for (let i = 6; i <= 10; i++) {
+        const page = await ctx.newPage()
+        const libScraperInstance = new LibScraper(ctx)
+        await libScraperInstance.getDataByPagination(page, i)
+        await page.close()
+    }
 }
 
-
 async function main() {
-    await scrapLibData()
+    await scrapLibraryData()
 }
 main()
     .catch((err) => {
@@ -29,4 +32,3 @@ main()
     .finally(() => {
         process.exit(0) // 프로세스 강제 종료
     })
-

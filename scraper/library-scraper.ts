@@ -27,7 +27,7 @@ export class LibScraper {
     async getDataByPagination(page: Page, targetPage: number) {
         await this.selectLocation(page)
         await this.selectLibType(page)
-        await this.moveToTargetPage(page, targetPage)
+        await this.moveToTargetPagination(page, targetPage)
         const libList: LibScrap[] = await this.getLibList(page)
         const libFilteredList: LibScrap[] = this.exctractCandidate(libList)
 
@@ -55,10 +55,18 @@ export class LibScraper {
         return x.length > 0
     }
 
-    async moveToTargetPage(page: Page, targetPage: number) {
+    async moveToTargetPagination(page: Page, targetPage: number) {
+        if (targetPage > 5) {
+            console.log(targetPage, "is more than 5")
+            const nextPaginationXPath = "//a[contains(@class, 'next_page')]"
+            const loc = page.locator(nextPaginationXPath)
+            await loc.first().click()
+            await page.waitForLoadState("networkidle")
+        }
         const pageNationXPath = "//a[@class='page']"
         const loc = page.locator(pageNationXPath)
-        await loc.nth(targetPage - 1).click()
+        const idx = (targetPage % 5) - 1
+        await loc.nth(idx === -1 ? 4 : idx).click()
         await page.waitForLoadState("networkidle")
     }
 

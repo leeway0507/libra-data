@@ -36,18 +36,23 @@ describe("library scraper", async () => {
                 console.log(value, (value % 5) - 1)
             })
     })
+    it("x", () => {
+        console.log(10 % 5)
+        console.log(10 % 5)
+    })
     it(
         "should move to target page",
         async () => {
-            const targetPage = 2
+            const targetPage = 7
             await newPage.goto("https://www.data4library.kr/openDataL")
             await newPage.waitForLoadState("domcontentloaded")
 
-            await libScraperInstance.moveToTargetPage(newPage, targetPage)
+            await libScraperInstance.moveToTargetPagination(newPage, targetPage)
 
             const pageNationXPath = "//a[@class='page']"
             const loc = newPage.locator(pageNationXPath)
-            const title = await loc.nth(targetPage - 1).getAttribute("title")
+            const idx = (targetPage % 5) - 1
+            const title = await loc.nth(idx === -1 ? 4 : idx).getAttribute("title")
             expect(title).toBe("현재 페이지")
         },
         { timeout: 10_000 }
