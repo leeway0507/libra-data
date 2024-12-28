@@ -31,4 +31,4 @@ config.go
 /cmd
 /config
 /data
-
+/.vscode
