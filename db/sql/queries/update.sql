@@ -11,4 +11,4 @@ WHERE
 
 -- name: UpdateVectorSearchStatus :exec
 
-UPDATE books SET vectorsearch = $1 WHERE isbn = $2;
+UPDATE books SET vector_search = $1 WHERE isbn = $2;

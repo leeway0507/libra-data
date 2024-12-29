@@ -60,7 +60,7 @@ func (q *Queries) ExtractBooksForEmbedding(ctx context.Context) ([]ExtractBooksF
 }
 
 const getBooks = `-- name: GetBooks :many
-SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, description, recommendation, toc, source, url, vectorsearch FROM Books
+SELECT id, isbn, title, author, publisher, publication_year, set_isbn, volume, image_url, description, recommendation, toc, source, url, vector_search FROM Books
 `
 
 func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
@@ -78,16 +78,16 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 			&i.Title,
 			&i.Author,
 			&i.Publisher,
-			&i.Publicationyear,
-			&i.Setisbn,
+			&i.PublicationYear,
+			&i.SetIsbn,
 			&i.Volume,
-			&i.Imageurl,
+			&i.ImageUrl,
 			&i.Description,
 			&i.Recommendation,
 			&i.Toc,
 			&i.Source,
 			&i.Url,
-			&i.Vectorsearch,
+			&i.VectorSearch,
 		); err != nil {
 			return nil, err
 		}
@@ -100,7 +100,7 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 }
 
 const getBooksFromIsbn = `-- name: GetBooksFromIsbn :one
-SELECT id, isbn, title, author, publisher, publicationyear, setisbn, volume, imageurl, description, recommendation, toc, source, url, vectorsearch FROM Books WHERE isbn = $1
+SELECT id, isbn, title, author, publisher, publication_year, set_isbn, volume, image_url, description, recommendation, toc, source, url, vector_search FROM Books WHERE isbn = $1
 `
 
 func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book, error) {
@@ -112,27 +112,70 @@ func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book,
 		&i.Title,
 		&i.Author,
 		&i.Publisher,
-		&i.Publicationyear,
-		&i.Setisbn,
+		&i.PublicationYear,
+		&i.SetIsbn,
 		&i.Volume,
-		&i.Imageurl,
+		&i.ImageUrl,
 		&i.Description,
 		&i.Recommendation,
 		&i.Toc,
 		&i.Source,
 		&i.Url,
-		&i.Vectorsearch,
+		&i.VectorSearch,
 	)
 	return i, err
 }
 
 const getLibCodFromLibName = `-- name: GetLibCodFromLibName :one
-SELECT libcode FROM libraries WHERE libname = $1
+SELECT lib_code FROM libraries WHERE lib_name = $1
 `
 
-func (q *Queries) GetLibCodFromLibName(ctx context.Context, libname pgtype.Text) (pgtype.Int4, error) {
-	row := q.db.QueryRow(ctx, getLibCodFromLibName, libname)
-	var libcode pgtype.Int4
-	err := row.Scan(&libcode)
-	return libcode, err
+func (q *Queries) GetLibCodFromLibName(ctx context.Context, libName pgtype.Text) (pgtype.Int4, error) {
+	row := q.db.QueryRow(ctx, getLibCodFromLibName, libName)
+	var lib_code pgtype.Int4
+	err := row.Scan(&lib_code)
+	return lib_code, err
+}
+
+const searchFromBooks = `-- name: SearchFromBooks :many
+SELECT id, isbn, title, author, publisher, publication_year, set_isbn, volume, image_url, description, recommendation, toc, source, url, vector_search FROM books
+WHERE author LIKE '%$1%' OR title LIKE '%$1%'
+ORDER BY ((bigm_similarity(author, $1) + bigm_similarity(title, $1))*10) DESC
+limit 50
+`
+
+func (q *Queries) SearchFromBooks(ctx context.Context, bigmSimilarity interface{}) ([]Book, error) {
+	rows, err := q.db.Query(ctx, searchFromBooks, bigmSimilarity)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Book
+	for rows.Next() {
+		var i Book
+		if err := rows.Scan(
+			&i.ID,
+			&i.Isbn,
+			&i.Title,
+			&i.Author,
+			&i.Publisher,
+			&i.PublicationYear,
+			&i.SetIsbn,
+			&i.Volume,
+			&i.ImageUrl,
+			&i.Description,
+			&i.Recommendation,
+			&i.Toc,
+			&i.Source,
+			&i.Url,
+			&i.VectorSearch,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

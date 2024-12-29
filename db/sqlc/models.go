@@ -15,16 +15,16 @@ type Book struct {
 	Title           pgtype.Text
 	Author          pgtype.Text
 	Publisher       pgtype.Text
-	Publicationyear pgtype.Text
-	Setisbn         pgtype.Text
+	PublicationYear pgtype.Text
+	SetIsbn         pgtype.Text
 	Volume          pgtype.Text
-	Imageurl        pgtype.Text
+	ImageUrl        pgtype.Text
 	Description     pgtype.Text
 	Recommendation  pgtype.Text
 	Toc             pgtype.Text
 	Source          pgtype.Text
 	Url             pgtype.Text
-	Vectorsearch    pgtype.Bool
+	VectorSearch    pgtype.Bool
 }
 
 type Bookembedding struct {
@@ -35,24 +35,24 @@ type Bookembedding struct {
 
 type Library struct {
 	ID            int32
-	Libcode       pgtype.Int4
-	Libname       pgtype.Text
-	Libaddress    pgtype.Text
+	LibCode       pgtype.Int4
+	LibName       pgtype.Text
+	LibAddress    pgtype.Text
 	Tel           pgtype.Text
 	Latitude      pgtype.Float8
 	Longtitude    pgtype.Float8
 	Homepage      pgtype.Text
 	Closed        pgtype.Text
-	Operatingtime pgtype.Text
-	Bookcount     pgtype.Int4
+	OperatingTime pgtype.Text
+	BookCount     pgtype.Int4
 }
 
 type Libsbook struct {
 	ID        int32
-	Libcode   pgtype.Int4
+	LibCode   pgtype.Int4
 	Isbn      pgtype.Text
-	Classnum  pgtype.Text
-	Bookcode  pgtype.Text
-	Shelfcode pgtype.Text
-	Shelfname pgtype.Text
+	ClassNum  pgtype.Text
+	BookCode  pgtype.Text
+	ShelfCode pgtype.Text
+	ShelfName pgtype.Text
 }

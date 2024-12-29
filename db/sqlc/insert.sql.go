@@ -19,10 +19,10 @@ INSERT INTO
         Title,
         Author,
         Publisher,
-        PublicationYear,
-        SetISBN,
+        Publication_year,
+        set_isbn,
         Volume,
-        ImageURL,
+        image_url,
         Description
     )
 VALUES (
@@ -46,10 +46,10 @@ type InsertBooksParams struct {
 	Title           pgtype.Text
 	Author          pgtype.Text
 	Publisher       pgtype.Text
-	Publicationyear pgtype.Text
-	Setisbn         pgtype.Text
+	PublicationYear pgtype.Text
+	SetIsbn         pgtype.Text
 	Volume          pgtype.Text
-	Imageurl        pgtype.Text
+	ImageUrl        pgtype.Text
 	Description     pgtype.Text
 }
 
@@ -59,10 +59,10 @@ func (q *Queries) InsertBooks(ctx context.Context, arg InsertBooksParams) ([]int
 		arg.Title,
 		arg.Author,
 		arg.Publisher,
-		arg.Publicationyear,
-		arg.Setisbn,
+		arg.PublicationYear,
+		arg.SetIsbn,
 		arg.Volume,
-		arg.Imageurl,
+		arg.ImageUrl,
 		arg.Description,
 	)
 	if err != nil {
@@ -102,51 +102,51 @@ func (q *Queries) InsertEmbeddings(ctx context.Context, arg InsertEmbeddingsPara
 }
 
 type InsertLibrariesParams struct {
-	Libcode       pgtype.Int4
-	Libname       pgtype.Text
-	Libaddress    pgtype.Text
+	LibCode       pgtype.Int4
+	LibName       pgtype.Text
+	LibAddress    pgtype.Text
 	Tel           pgtype.Text
 	Latitude      pgtype.Float8
 	Longtitude    pgtype.Float8
 	Homepage      pgtype.Text
 	Closed        pgtype.Text
-	Operatingtime pgtype.Text
-	Bookcount     pgtype.Int4
+	OperatingTime pgtype.Text
+	BookCount     pgtype.Int4
 }
 
 const insertLibsBooks = `-- name: InsertLibsBooks :many
 INSERT INTO
     Libsbooks (
-        libcode,
+        lib_code,
         isbn,
-        classnum,
-        bookcode,
-        shelfcode,
-        shelfname
+        class_num,
+        book_code,
+        shelf_code,
+        shelf_name
     )
 VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT (isbn, libcode) DO NOTHING
+ON CONFLICT (isbn, lib_code) DO NOTHING
 RETURNING
     ID
 `
 
 type InsertLibsBooksParams struct {
-	Libcode   pgtype.Int4
+	LibCode   pgtype.Int4
 	Isbn      pgtype.Text
-	Classnum  pgtype.Text
-	Bookcode  pgtype.Text
-	Shelfcode pgtype.Text
-	Shelfname pgtype.Text
+	ClassNum  pgtype.Text
+	BookCode  pgtype.Text
+	ShelfCode pgtype.Text
+	ShelfName pgtype.Text
 }
 
 func (q *Queries) InsertLibsBooks(ctx context.Context, arg InsertLibsBooksParams) ([]int32, error) {
 	rows, err := q.db.Query(ctx, insertLibsBooks,
-		arg.Libcode,
+		arg.LibCode,
 		arg.Isbn,
-		arg.Classnum,
-		arg.Bookcode,
-		arg.Shelfcode,
-		arg.Shelfname,
+		arg.ClassNum,
+		arg.BookCode,
+		arg.ShelfCode,
+		arg.ShelfName,
 	)
 	if err != nil {
 		return nil, err

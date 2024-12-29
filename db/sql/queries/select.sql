@@ -17,4 +17,10 @@ WHERE (
         and b.source is not null
     );
 -- name: GetLibCodFromLibName :one
-SELECT libcode FROM libraries WHERE libname = $1;
+SELECT lib_code FROM libraries WHERE lib_name = $1;
+
+-- name: SearchFromBooks :many
+SELECT * FROM books
+WHERE author LIKE '%$1%' OR title LIKE '%$1%'
+ORDER BY ((bigm_similarity(author, $1) + bigm_similarity(title, $1))*10) DESC
+limit 50;

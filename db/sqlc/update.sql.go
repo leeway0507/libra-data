@@ -46,15 +46,15 @@ func (q *Queries) UpdateScrapData(ctx context.Context, arg UpdateScrapDataParams
 
 const updateVectorSearchStatus = `-- name: UpdateVectorSearchStatus :exec
 
-UPDATE books SET vectorsearch = $1 WHERE isbn = $2
+UPDATE books SET vector_search = $1 WHERE isbn = $2
 `
 
 type UpdateVectorSearchStatusParams struct {
-	Vectorsearch pgtype.Bool
+	VectorSearch pgtype.Bool
 	Isbn         pgtype.Text
 }
 
 func (q *Queries) UpdateVectorSearchStatus(ctx context.Context, arg UpdateVectorSearchStatusParams) error {
-	_, err := q.db.Exec(ctx, updateVectorSearchStatus, arg.Vectorsearch, arg.Isbn)
+	_, err := q.db.Exec(ctx, updateVectorSearchStatus, arg.VectorSearch, arg.Isbn)
 	return err
 }

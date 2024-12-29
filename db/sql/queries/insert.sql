@@ -5,10 +5,10 @@ INSERT INTO
         Title,
         Author,
         Publisher,
-        PublicationYear,
-        SetISBN,
+        Publication_year,
+        set_isbn,
         Volume,
-        ImageURL,
+        image_url,
         Description
     )
 VALUES (
@@ -29,31 +29,31 @@ RETURNING
 -- name: InsertLibsBooks :many
 INSERT INTO
     Libsbooks (
-        libcode,
+        lib_code,
         isbn,
-        classnum,
-        bookcode,
-        shelfcode,
-        shelfname
+        class_num,
+        book_code,
+        shelf_code,
+        shelf_name
     )
 VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT (isbn, libcode) DO NOTHING
+ON CONFLICT (isbn, lib_code) DO NOTHING
 RETURNING
     ID;
 
 -- name: InsertLibraries :copyfrom
 INSERT INTO
     Libraries (
-        LibCode,
-        LibName,
-        LibAddress,
+        lib_code,
+        lib_name,
+        lib_address,
         Tel,
         Latitude,
         Longtitude,
         Homepage,
         Closed,
-        OperatingTime,
-        BookCount
+        operating_time,
+        book_count
     )
 VALUES (
         $1,
