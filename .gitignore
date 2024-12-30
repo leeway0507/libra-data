@@ -32,3 +32,4 @@ config.go
 /config
 /data
 /.vscode
+/token/data
