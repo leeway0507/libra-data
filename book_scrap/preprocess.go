@@ -21,7 +21,6 @@ type BookScrap struct {
 }
 
 func New(conn *pgx.Conn, dataPath string) *BookScrap {
-
 	return &BookScrap{
 		query:    sqlc.New(conn),
 		dataPath: dataPath,
