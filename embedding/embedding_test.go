@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestEmebedding(t *testing.T) {
@@ -25,6 +24,7 @@ func TestEmebedding(t *testing.T) {
 
 	testQuery := sqlc.New(conn)
 	req := NewReq(testQuery, cfg.OPEN_AI_API_KEY, testDataPath)
+	req.SetBatchId("test")
 
 	t.Run("load bookdata from db", func(t *testing.T) {
 		data := req.LoadBookDataFromDB()
@@ -39,7 +39,7 @@ func TestEmebedding(t *testing.T) {
 		}
 		log.Printf("data: %#+v\n", data)
 	})
-	t.Run("Create batch Request", func(t *testing.T) {
+	t.Run("Create Batch Request", func(t *testing.T) {
 		data := req.LoadBookDataFromJson(filepath.Join(testDataPath, "embedding_example.json"))
 		batchReq, err := req.CreateBatchReqFile(data)
 		if err != nil {
@@ -48,45 +48,59 @@ func TestEmebedding(t *testing.T) {
 		if len(batchReq) == 0 {
 			t.Fatal("data length is 0")
 		}
-		now := time.Now()
-		filename := now.Format("2006-01-02_15-04-05") + ".jsonl"
 
-		req.SaveBatchReqFile(filepath.Join(testDataPath, filename), batchReq)
-		if _, err := os.Stat(filepath.Join(testDataPath, filename)); err != nil {
+		path, err := req.SaveBatchReqFile(batchReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Stat(path); err != nil {
 			if os.IsNotExist(err) {
 				t.Fatal(err)
 			}
 		}
 	})
-	t.Run("Upload batch Request to openai server", func(t *testing.T) {
-		req.UploadBatchReqFile(filepath.Join(testDataPath, "2024-12-30_12-27-00.jsonl"))
+	t.Run("Upload Batch Request to openai server", func(t *testing.T) {
+		err := req.UploadBatchReqFile()
+		if err != nil {
+			t.Fatal(err)
+		}
 	})
 	t.Run("Execute Batch Request", func(t *testing.T) {
-		req.ExecuteBatch(filepath.Join(testDataPath, "2024-12-30_12-27-00_upload.json"))
+		err := req.ExecuteBatch()
+		if err != nil {
+			t.Fatal(err)
+		}
 	})
 	t.Run("Download Batch Data", func(t *testing.T) {
-		req.GetBatchRawData(filepath.Join(testDataPath, "2024-12-30_12-27-00_batch_start.json"))
+		err := req.GetBatchRawData()
+		if err != nil {
+			t.Fatal(err)
+		}
 	})
 	t.Run("Preprocess Batch Data", func(t *testing.T) {
-		req.PreprocessBatchData(filepath.Join(testDataPath, "2024-12-30_12-27-00_batch_data.jsonl"))
+		err := req.PreprocessBatchData()
+		if err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	t.Run("save", func(t *testing.T) {
-		file, err := os.Open(filepath.Join(testDataPath, "openai_resp.json"))
+		respFile, err := os.Open(filepath.Join(testDataPath, "openai_resp.json"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := io.ReadAll(file)
+		b, err := io.ReadAll(respFile)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var openAIresp Resp
+		var Resp Resp
 
-		json.Unmarshal(b, &openAIresp)
+		json.Unmarshal(b, &Resp)
 
 		vectors := &EmbeddingData{
 			Isbn:      "9791138337526",
-			Embedding: openAIresp.Data[0].Embedding,
+			Embedding: Resp.Data[0].Embedding,
 		}
 
 		if err = req.SaveEmbeddingResp(vectors); err != nil {
@@ -94,7 +108,7 @@ func TestEmebedding(t *testing.T) {
 		}
 	})
 	t.Run("load embedding", func(t *testing.T) {
-		_, err := req.LoadEmbeddingData("9791138337526")
+		_, err := req.LoadEmbeddingData("9788956749808")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,7 +142,6 @@ func TestEmebedding(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
 		}
 	})
 }

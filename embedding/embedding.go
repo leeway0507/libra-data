@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pgvector/pgvector-go"
@@ -76,6 +77,7 @@ type req struct {
 	query     *sqlc.Queries
 	openAIKey string
 	dataPath  string
+	batchId   string
 }
 
 func NewReq(query *sqlc.Queries, openAIKey string, dataPath string) *req {
@@ -83,7 +85,15 @@ func NewReq(query *sqlc.Queries, openAIKey string, dataPath string) *req {
 		query,
 		openAIKey,
 		dataPath,
+		"batchId",
 	}
+}
+
+func (R *req) GetBatchId() string {
+	return R.batchId
+}
+func (R *req) SetBatchId(id string) {
+	R.batchId = id
 }
 
 func (R *req) LoadBookDataFromJson(path string) []sqlc.ExtractBooksForEmbeddingRow {
@@ -116,41 +126,34 @@ func (R *req) LoadBookDataFromDB() []sqlc.ExtractBooksForEmbeddingRow {
 	return data
 }
 
-func (R *req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*EmbeddingData, error) {
-	reqBody := R.PrepareEmbeddingRequestBody(&data)
+func (R *req) RequestBatch(data []sqlc.ExtractBooksForEmbeddingRow) {
+	R.batchId = time.Now().Format("2006-01-02_15-04-05")
 
-	reqBodyByte, err := json.Marshal(reqBody)
+	batchReq, err := R.CreateBatchReqFile(data)
 	if err != nil {
-		return nil, err
+		panic(err)
+	}
+	_, err = R.SaveBatchReqFile(batchReq)
+	if err != nil {
+		panic(err)
 	}
 
-	url := "https://api.openai.com/v1/embeddings"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBodyByte))
+	err = R.UploadBatchReqFile()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+R.openAIKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	err = R.ExecuteBatch()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	defer resp.Body.Close()
-
-	var openAIresp Resp
-	body, err := io.ReadAll(resp.Body)
+	err = R.GetBatchRawData()
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return nil, err
+		panic(err)
 	}
-	json.Unmarshal(body, &openAIresp)
-
-	return &EmbeddingData{
-		Isbn:      data.Isbn.String,
-		Embedding: openAIresp.Data[0].Embedding,
-	}, nil
+	err = R.PreprocessBatchData()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (R *req) CreateBatchReqFile(rawData []sqlc.ExtractBooksForEmbeddingRow) ([]BatchUploadReq, error) {
@@ -169,27 +172,35 @@ func (R *req) CreateBatchReqFile(rawData []sqlc.ExtractBooksForEmbeddingRow) ([]
 	return batchList, nil
 }
 
-func (R *req) SaveBatchReqFile(path string, batchReq []BatchUploadReq) {
+func (R *req) SaveBatchReqFile(batchReq []BatchUploadReq) (string, error) {
+	path := filepath.Join(R.dataPath, "batch", R.batchId, "request.jsonl")
+
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+		return "", err
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
-		log.Panic(err)
+		return "", err
 	}
-	writer := bufio.NewWriter(f)
 
+	writer := bufio.NewWriter(f)
 	for _, req := range batchReq {
 		line, err := json.Marshal(req)
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 		_, err = writer.WriteString(string(line) + "\n")
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 	}
 	writer.Flush()
+	return path, nil
 }
 
-func (R *req) UploadBatchReqFile(path string) {
+func (R *req) UploadBatchReqFile() error {
+	path := filepath.Join(R.dataPath, "batch", R.batchId, "request.jsonl")
 	file, err := os.Open(path)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to open file: %v", err))
@@ -201,24 +212,24 @@ func (R *req) UploadBatchReqFile(path string) {
 
 	err = writer.WriteField("purpose", "batch")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fileWriter, err := writer.CreateFormFile("file", path)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, err = io.Copy(fileWriter, file)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = writer.Close()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	req, err := http.NewRequest("POST", "https://api.openai.com/v1/files", &body)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+R.openAIKey)
@@ -227,51 +238,52 @@ func (R *req) UploadBatchReqFile(path string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	uploadFileName := strings.Split(filepath.Base(path), ".")[0] + "_upload.json"
-	f, err := os.Create(filepath.Join(filepath.Dir(path), uploadFileName))
+	f, err := os.Create(filepath.Join(R.dataPath, "batch", R.batchId, "upload_result.json"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer f.Close()
 	f.Write(respBody)
+	return nil
 }
-func (R *req) ExecuteBatch(path string) {
+func (R *req) ExecuteBatch() error {
+	path := filepath.Join(R.dataPath, "batch", R.batchId, "upload_result.json")
 	b := R.LoadFile(path)
-	temp := make(map[string]any)
 
+	temp := make(map[string]any)
 	err := json.Unmarshal(b, &temp)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal data: %v", err))
+		return err
 	}
 
 	fileID, isExist := temp["id"]
 	if !isExist {
-		log.Printf("temp: %#+v\n", temp)
-		panic(fmt.Sprintf("id is not exits %v", fileID))
+		return err
 	}
 
 	strFileID, ok := fileID.(string)
 	if !ok {
-		panic(fmt.Sprintf("Value is not a string %v", fileID))
+		return err
 	}
 
 	respBody := R.ExecuteBatchReq(strFileID)
-	batchFileName := strings.Split(filepath.Base(path), "_upload.json")[0] + "_batch_start.json"
-	f, err := os.Create(filepath.Join(filepath.Dir(path), batchFileName))
+	f, err := os.Create(filepath.Join(R.dataPath, "batch", R.batchId, "batch_start.json"))
 	if err != nil {
-		panic(fmt.Sprintf("Failed to read response body: %v", err))
+		return err
 	}
 	defer f.Close()
 	f.Write(respBody)
+
+	return nil
 }
 func (R *req) ExecuteBatchReq(uploadFileId string) []byte {
 	requestData := BatchExecReq{
@@ -306,19 +318,23 @@ func (R *req) ExecuteBatchReq(uploadFileId string) []byte {
 	return b
 }
 
-func (R *req) GetBatchFileName(path string) map[string]string {
-	b := R.LoadFile(path)
+func (R *req) GetBatchFileName() map[string]string {
+	path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_start.json")
+
 	temp := make(map[string]any)
 
+	b := R.LoadFile(path)
 	err := json.Unmarshal(b, &temp)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to unmarshal: %v", err))
 	}
+
 	batchId, isExist := temp["id"]
 	if !isExist {
 		log.Printf("temp: %#+v\n", temp)
 		panic(fmt.Sprintf("id is not exits %v", batchId))
 	}
+
 	strBatchId, ok := batchId.(string)
 	if !ok {
 		panic(fmt.Sprintf("Value is not a string %v", batchId))
@@ -356,37 +372,39 @@ func (R *req) GetBatchFileName(path string) map[string]string {
 	}
 }
 
-func (R *req) GetBatchRawData(path string) {
-	result := R.GetBatchFileName(path)
-	outputFileId, isExist := result["outputFileId"]
+func (R *req) GetBatchRawData() error {
+	result := R.GetBatchFileName()
 
+	outputFileId, isExist := result["outputFileId"]
 	if !isExist {
-		log.Printf("x: %#+v\n", result)
-		panic(fmt.Sprintf("id is not exits %v", outputFileId))
+		return fmt.Errorf("id is not exits %v", outputFileId)
+	}
+	errorFileId, isExist := result["errorFileId"]
+	if isExist && errorFileId != "" {
+		return fmt.Errorf("err file id %v", errorFileId)
 	}
 
-	saveFile := strings.Split(filepath.Base(path), "_batch_start.json")[0] + "_batch_data.jsonl"
-	savePath := filepath.Join(filepath.Dir(path), saveFile)
-
-	body := R.Get(fmt.Sprintf("https://api.openai.com/v1/files/%s/content", outputFileId))
-
-	out, err := os.Create(savePath)
+	path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_data.jsonl")
+	out, err := os.Create(path)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create file: %v", err))
+		return err
 	}
 	defer out.Close()
 
+	body := R.Get(fmt.Sprintf("https://api.openai.com/v1/files/%s/content", outputFileId))
 	_, err = io.Copy(out, body)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to write response to file: %v", err))
+		return err
 	}
-	log.Printf("save: %#+v\n", savePath)
+	log.Printf("save: %#+v\n", path)
+	return nil
 }
 
-func (R *req) PreprocessBatchData(path string) {
+func (R *req) PreprocessBatchData() error {
+	path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_data.jsonl")
 	f, err := os.Open(path)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to read file: %v", err))
+		return err
 	}
 
 	scanner := bufio.NewScanner(f)
@@ -405,9 +423,46 @@ func (R *req) PreprocessBatchData(path string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		panic(fmt.Sprintf("Error reading file: %v", err))
+		return err
+	}
+	return nil
+}
+
+func (R *req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*EmbeddingData, error) {
+	reqBody := R.PrepareEmbeddingRequestBody(&data)
+
+	reqBodyByte, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
 	}
 
+	url := "https://api.openai.com/v1/embeddings"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBodyByte))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+R.openAIKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var openAIresp Resp
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return nil, err
+	}
+	json.Unmarshal(body, &openAIresp)
+
+	return &EmbeddingData{
+		Isbn:      data.Isbn.String,
+		Embedding: openAIresp.Data[0].Embedding,
+	}, nil
 }
 
 func (R *req) PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) *Req {
