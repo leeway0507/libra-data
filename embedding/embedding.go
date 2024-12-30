@@ -218,7 +218,7 @@ func (R *req) InsertToDB() error {
 		}
 		vectorStatusArgs := sqlc.UpdateVectorSearchStatusParams{
 			Isbn:         pgtype.Text{String: isbn, Valid: true},
-			Vectorsearch: pgtype.Bool{Bool: true, Valid: true},
+			VectorSearch: pgtype.Bool{Bool: true, Valid: true},
 		}
 
 		err = R.query.UpdateVectorSearchStatus(ctx, vectorStatusArgs)

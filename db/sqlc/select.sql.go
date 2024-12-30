@@ -130,8 +130,8 @@ const getLibCodFromLibName = `-- name: GetLibCodFromLibName :one
 SELECT lib_code FROM libraries WHERE lib_name = $1
 `
 
-func (q *Queries) GetLibCodFromLibName(ctx context.Context, libName pgtype.Text) (pgtype.Int4, error) {
-	row := q.db.QueryRow(ctx, getLibCodFromLibName, libName)
+func (q *Queries) GetLibCodFromLibName(ctx context.Context, LibName pgtype.Text) (pgtype.Int4, error) {
+	row := q.db.QueryRow(ctx, getLibCodFromLibName, LibName)
 	var lib_code pgtype.Int4
 	err := row.Scan(&lib_code)
 	return lib_code, err

@@ -298,11 +298,11 @@ func (D *DB) InsertBooks(books []*pb.BookRow) error {
 			Title:           pgtype.Text{String: book.Title, Valid: true},
 			Author:          pgtype.Text{String: string(authorRunes[0:slices.Min([]int{512, len(authorRunes)})]), Valid: true},
 			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
-			Publicationyear: pgtype.Text{String: book.PublicationYear, Valid: true},
+			PublicationYear: pgtype.Text{String: book.PublicationYear, Valid: true},
 			Isbn:            pgtype.Text{String: book.Isbn, Valid: true},
-			Setisbn:         pgtype.Text{String: book.SetIsbn, Valid: true},
+			SetIsbn:         pgtype.Text{String: book.SetIsbn, Valid: true},
 			Volume:          pgtype.Text{String: book.Volume, Valid: true},
-			Imageurl:        pgtype.Text{Valid: true},
+			ImageUrl:        pgtype.Text{Valid: true},
 			Description:     pgtype.Text{Valid: true},
 		}
 		bookDB = append(bookDB, book)
@@ -324,9 +324,9 @@ func (D *DB) InsertLibsBooks(books []*pb.BookRow, libCode int32) error {
 	var bookDB []sqlc.InsertLibsBooksParams
 	for _, book := range books {
 		book := sqlc.InsertLibsBooksParams{
-			Libcode:  pgtype.Int4{Int32: libCode, Valid: true},
+			LibCode:  pgtype.Int4{Int32: libCode, Valid: true},
 			Isbn:     pgtype.Text{String: book.Isbn, Valid: true},
-			Classnum: pgtype.Text{String: book.ClassNum, Valid: true},
+			ClassNum: pgtype.Text{String: book.ClassNum, Valid: true},
 		}
 		bookDB = append(bookDB, book)
 	}

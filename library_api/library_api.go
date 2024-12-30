@@ -233,11 +233,11 @@ func (D *DB) InsertBooks(jsonPath string) error {
 			Title:           pgtype.Text{String: book.Bookname, Valid: true},
 			Author:          pgtype.Text{String: string(authorRunes[0:slices.Min([]int{512, len(authorRunes)})]), Valid: true},
 			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
-			Publicationyear: pgtype.Text{String: book.PublicationYear, Valid: true},
+			PublicationYear: pgtype.Text{String: book.PublicationYear, Valid: true},
 			Isbn:            pgtype.Text{String: book.ISBN13, Valid: true},
-			Setisbn:         pgtype.Text{String: book.SetISBN13, Valid: true},
+			SetIsbn:         pgtype.Text{String: book.SetISBN13, Valid: true},
 			Volume:          pgtype.Text{String: book.Vol, Valid: true},
-			Imageurl:        pgtype.Text{Valid: true},
+			ImageUrl:        pgtype.Text{Valid: true},
 			Description:     pgtype.Text{Valid: true},
 		}
 		bookDB = append(bookDB, book)
@@ -274,23 +274,23 @@ func (D *DB) InsertLibsBooks(jsonPath string) error {
 
 	var bookDB []sqlc.InsertLibsBooksParams
 	for _, book := range bookJson {
-		var Shelfcode string
-		var Shelfname string
+		var ShelfCode string
+		var ShelfName string
 		var BookCode string
 		arr := book.CallNumbers
 		if len(arr) > 0 && arr[0].CallNumber.ShelfLocCode != "" {
-			Shelfcode = book.CallNumbers[0].CallNumber.ShelfLocCode
-			Shelfname = book.CallNumbers[0].CallNumber.ShelfLocName
+			ShelfCode = book.CallNumbers[0].CallNumber.ShelfLocCode
+			ShelfName = book.CallNumbers[0].CallNumber.ShelfLocName
 			BookCode = book.CallNumbers[0].CallNumber.BookCode
 
 		}
 		book := sqlc.InsertLibsBooksParams{
-			Libcode:   pgtype.Int4{Int32: int32(D.libCode), Valid: true},
+			LibCode:   pgtype.Int4{Int32: int32(D.libCode), Valid: true},
 			Isbn:      pgtype.Text{String: book.ISBN13, Valid: true},
-			Classnum:  pgtype.Text{String: book.ClassNo, Valid: true},
-			Bookcode:  pgtype.Text{String: BookCode, Valid: true},
-			Shelfcode: pgtype.Text{String: Shelfcode, Valid: true},
-			Shelfname: pgtype.Text{String: Shelfname, Valid: true},
+			ClassNum:  pgtype.Text{String: book.ClassNo, Valid: true},
+			BookCode:  pgtype.Text{String: BookCode, Valid: true},
+			ShelfCode: pgtype.Text{String: ShelfCode, Valid: true},
+			ShelfName: pgtype.Text{String: ShelfName, Valid: true},
 		}
 		bookDB = append(bookDB, book)
 	}
@@ -347,16 +347,16 @@ func (D *DB) InsertLibInfo(jsonPath string) error {
 		}
 
 		library := sqlc.InsertLibrariesParams{
-			Libcode:       pgtype.Int4{Int32: int32(libCodeInt), Valid: true},
-			Libname:       pgtype.Text{String: d["libName"], Valid: true},
-			Libaddress:    pgtype.Text{String: d["address"], Valid: true},
+			LibCode:       pgtype.Int4{Int32: int32(libCodeInt), Valid: true},
+			LibName:       pgtype.Text{String: d["libName"], Valid: true},
+			LibAddress:    pgtype.Text{String: d["address"], Valid: true},
 			Tel:           pgtype.Text{String: d["tel"], Valid: true},
 			Latitude:      pgtype.Float8{Float64: LatitudeFloat, Valid: true},
 			Longtitude:    pgtype.Float8{Float64: LongitudeFloat, Valid: true},
 			Homepage:      pgtype.Text{String: d["homepage"], Valid: true},
 			Closed:        pgtype.Text{String: d["closed"], Valid: true},
-			Operatingtime: pgtype.Text{String: d["operatingTime"], Valid: true},
-			Bookcount:     pgtype.Int4{Int32: int32(bookCountInt), Valid: true},
+			OperatingTime: pgtype.Text{String: d["operatingTime"], Valid: true},
+			BookCount:     pgtype.Int4{Int32: int32(bookCountInt), Valid: true},
 		}
 		libraries = append(libraries, library)
 	}
