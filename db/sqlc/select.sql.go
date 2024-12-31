@@ -20,7 +20,7 @@ SELECT
     recommendation
 FROM books b
 WHERE (
-        b.vectorsearch is false
+        b.vector_search is false
         and b.source is not null
     )
 `
@@ -130,8 +130,8 @@ const getLibCodFromLibName = `-- name: GetLibCodFromLibName :one
 SELECT lib_code FROM libraries WHERE lib_name = $1
 `
 
-func (q *Queries) GetLibCodFromLibName(ctx context.Context, LibName pgtype.Text) (pgtype.Int4, error) {
-	row := q.db.QueryRow(ctx, getLibCodFromLibName, LibName)
+func (q *Queries) GetLibCodFromLibName(ctx context.Context, libName pgtype.Text) (pgtype.Int4, error) {
+	row := q.db.QueryRow(ctx, getLibCodFromLibName, libName)
 	var lib_code pgtype.Int4
 	err := row.Scan(&lib_code)
 	return lib_code, err

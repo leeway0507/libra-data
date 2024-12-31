@@ -23,19 +23,19 @@ import (
 )
 
 const ALREADY_UPDATED = "U"
-const maxTokenSize = 8192
+const maxTokenSize = 7000
 
 type EmbeddingData struct {
 	Isbn      string
 	Embedding []float32
 }
 
-type Req struct {
+type ReqBody struct {
 	Input string `json:"input"`
 	Model string `json:"model"`
 }
 
-type Resp struct {
+type RespBody struct {
 	Object string `json:"object"`
 	Data   []struct {
 		Object    string    `json:"object"`
@@ -55,16 +55,16 @@ type BatchResultResp struct {
 	Response struct {
 		StatusCode int32  `json:"status_code"`
 		RequestID  string `json:"request_id"`
-		Body       Resp
+		Body       RespBody
 	} `json:"response"`
 	Error any `json:"error"`
 }
 
 type BatchUploadReq struct {
-	CustomId string `json:"custom_id"`
-	Method   string `json:"method"`
-	Url      string `json:"url"`
-	Body     Req    `json:"body"`
+	CustomId string  `json:"custom_id"`
+	Method   string  `json:"method"`
+	Url      string  `json:"url"`
+	Body     ReqBody `json:"body"`
 }
 
 type BatchExecReq struct {
@@ -73,15 +73,15 @@ type BatchExecReq struct {
 	CompletionWindow string `json:"completion_window"`
 }
 
-type req struct {
+type Req struct {
 	query     *sqlc.Queries
 	openAIKey string
 	dataPath  string
 	batchId   string
 }
 
-func NewReq(query *sqlc.Queries, openAIKey string, dataPath string) *req {
-	return &req{
+func NewReq(query *sqlc.Queries, openAIKey string, dataPath string) *Req {
+	return &Req{
 		query,
 		openAIKey,
 		dataPath,
@@ -89,14 +89,14 @@ func NewReq(query *sqlc.Queries, openAIKey string, dataPath string) *req {
 	}
 }
 
-func (R *req) GetBatchId() string {
+func (R *Req) GetBatchId() string {
 	return R.batchId
 }
-func (R *req) SetBatchId(id string) {
+func (R *Req) SetBatchId(id string) {
 	R.batchId = id
 }
 
-func (R *req) LoadBookDataFromJson(path string) []sqlc.ExtractBooksForEmbeddingRow {
+func (R *Req) LoadBookDataFromJson(path string) []sqlc.ExtractBooksForEmbeddingRow {
 	b := R.LoadFile(path)
 	var books []sqlc.Book
 	err := json.Unmarshal(b, &books)
@@ -117,7 +117,7 @@ func (R *req) LoadBookDataFromJson(path string) []sqlc.ExtractBooksForEmbeddingR
 	return bookForEmbedding
 }
 
-func (R *req) LoadBookDataFromDB() []sqlc.ExtractBooksForEmbeddingRow {
+func (R *Req) LoadBookDataFromDB() []sqlc.ExtractBooksForEmbeddingRow {
 	ctx := context.Background()
 	data, err := R.query.ExtractBooksForEmbedding(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func (R *req) LoadBookDataFromDB() []sqlc.ExtractBooksForEmbeddingRow {
 	return data
 }
 
-func (R *req) RequestBatch(data []sqlc.ExtractBooksForEmbeddingRow) {
+func (R *Req) RequestBatch(data []sqlc.ExtractBooksForEmbeddingRow) {
 	R.batchId = time.Now().Format("2006-01-02_15-04-05")
 
 	batchReq, err := R.CreateBatchReqFile(data)
@@ -156,7 +156,7 @@ func (R *req) RequestBatch(data []sqlc.ExtractBooksForEmbeddingRow) {
 	}
 }
 
-func (R *req) CreateBatchReqFile(rawData []sqlc.ExtractBooksForEmbeddingRow) ([]BatchUploadReq, error) {
+func (R *Req) CreateBatchReqFile(rawData []sqlc.ExtractBooksForEmbeddingRow) ([]BatchUploadReq, error) {
 	var batchList []BatchUploadReq
 	for _, data := range rawData {
 		batchList = append(batchList, BatchUploadReq{
@@ -172,7 +172,7 @@ func (R *req) CreateBatchReqFile(rawData []sqlc.ExtractBooksForEmbeddingRow) ([]
 	return batchList, nil
 }
 
-func (R *req) SaveBatchReqFile(batchReq []BatchUploadReq) (string, error) {
+func (R *Req) SaveBatchReqFile(batchReq []BatchUploadReq) (string, error) {
 	path := filepath.Join(R.dataPath, "batch", R.batchId, "request.jsonl")
 
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
@@ -199,7 +199,7 @@ func (R *req) SaveBatchReqFile(batchReq []BatchUploadReq) (string, error) {
 	return path, nil
 }
 
-func (R *req) UploadBatchReqFile() error {
+func (R *Req) UploadBatchReqFile() error {
 	path := filepath.Join(R.dataPath, "batch", R.batchId, "request.jsonl")
 	file, err := os.Open(path)
 	if err != nil {
@@ -255,7 +255,7 @@ func (R *req) UploadBatchReqFile() error {
 	f.Write(respBody)
 	return nil
 }
-func (R *req) ExecuteBatch() error {
+func (R *Req) ExecuteBatch() error {
 	path := filepath.Join(R.dataPath, "batch", R.batchId, "upload_result.json")
 	b := R.LoadFile(path)
 
@@ -285,7 +285,7 @@ func (R *req) ExecuteBatch() error {
 
 	return nil
 }
-func (R *req) ExecuteBatchReq(uploadFileId string) []byte {
+func (R *Req) ExecuteBatchReq(uploadFileId string) []byte {
 	requestData := BatchExecReq{
 		InputFileID:      uploadFileId,
 		Endpoint:         "/v1/embeddings",
@@ -318,7 +318,7 @@ func (R *req) ExecuteBatchReq(uploadFileId string) []byte {
 	return b
 }
 
-func (R *req) GetBatchFileName() map[string]string {
+func (R *Req) GetBatchFileName() map[string]string {
 	path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_start.json")
 
 	temp := make(map[string]any)
@@ -372,7 +372,7 @@ func (R *req) GetBatchFileName() map[string]string {
 	}
 }
 
-func (R *req) GetBatchRawData() error {
+func (R *Req) GetBatchRawData() error {
 	result := R.GetBatchFileName()
 
 	outputFileId, isExist := result["outputFileId"]
@@ -381,32 +381,47 @@ func (R *req) GetBatchRawData() error {
 	}
 	errorFileId, isExist := result["errorFileId"]
 	if isExist && errorFileId != "" {
-		return fmt.Errorf("err file id %v", errorFileId)
+		log.Printf("errorFileId Detected: %#+v\n", errorFileId)
+
+		path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_fail.jsonl")
+		out, err := os.Create(path)
+		if err != nil {
+			panic(err)
+		}
+		defer out.Close()
+
+		body := R.Get(fmt.Sprintf("https://api.openai.com/v1/files/%s/content", errorFileId))
+		_, err = io.Copy(out, body)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("saved errorFileId: %#+v\n", path)
+
 	}
 
 	path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_data.jsonl")
 	out, err := os.Create(path)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	defer out.Close()
 
 	body := R.Get(fmt.Sprintf("https://api.openai.com/v1/files/%s/content", outputFileId))
 	_, err = io.Copy(out, body)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	log.Printf("save: %#+v\n", path)
 	return nil
 }
 
-func (R *req) PreprocessBatchData() error {
+func (R *Req) PreprocessBatchData() error {
 	path := filepath.Join(R.dataPath, "batch", R.batchId, "batch_data.jsonl")
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-
+	errorLogger := R.GetErrorLogger()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -415,6 +430,9 @@ func (R *req) PreprocessBatchData() error {
 		if err != nil {
 			fmt.Printf("Failed to parse line: %s, error: %v\n", line, err)
 			continue
+		}
+		if record.Error != nil {
+			errorLogger.Println(record)
 		}
 		R.SaveEmbeddingResp(&EmbeddingData{
 			Isbn:      record.CustomID,
@@ -428,7 +446,7 @@ func (R *req) PreprocessBatchData() error {
 	return nil
 }
 
-func (R *req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*EmbeddingData, error) {
+func (R *Req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*EmbeddingData, error) {
 	reqBody := R.PrepareEmbeddingRequestBody(&data)
 
 	reqBodyByte, err := json.Marshal(reqBody)
@@ -451,7 +469,7 @@ func (R *req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*Embeddin
 	}
 	defer resp.Body.Close()
 
-	var openAIresp Resp
+	var openAIresp RespBody
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
@@ -465,20 +483,20 @@ func (R *req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*Embeddin
 	}, nil
 }
 
-func (R *req) PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) *Req {
+func (R *Req) PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) *ReqBody {
 	runes := []rune(data.Title.String +
 		data.Description.String +
 		data.Toc.String +
 		data.Recommendation.String)
 
-	reqBody := &Req{
+	reqBody := &ReqBody{
 		Input: string(runes[0:min(len(runes), maxTokenSize)]),
 		Model: "text-embedding-3-small",
 	}
 	return reqBody
 }
 
-func (R *req) SaveEmbeddingResp(resp *EmbeddingData) error {
+func (R *Req) SaveEmbeddingResp(resp *EmbeddingData) error {
 	embeddingpb := &pb.EmbeddingVector{
 		Embedding: resp.Embedding,
 		Isbn:      resp.Isbn,
@@ -498,7 +516,7 @@ func (R *req) SaveEmbeddingResp(resp *EmbeddingData) error {
 	return nil
 }
 
-func (R *req) LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
+func (R *Req) LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
 	b := R.LoadFile(filepath.Join(R.dataPath, isbn+".pb"))
 	embeddingVector := &pb.EmbeddingVector{}
 	err := proto.Unmarshal(b, embeddingVector)
@@ -509,7 +527,7 @@ func (R *req) LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
 	return embeddingVector, nil
 }
 
-func (R *req) InsertToDB() error {
+func (R *Req) InsertToDB() error {
 	embeddingPath := filepath.Join(R.dataPath)
 	entries, err := os.ReadDir(embeddingPath)
 	if err != nil {
@@ -563,7 +581,7 @@ func (R *req) InsertToDB() error {
 	return nil
 }
 
-func (R *req) Get(url string) io.ReadCloser {
+func (R *Req) Get(url string) io.ReadCloser {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create request: %v", err))
@@ -584,7 +602,7 @@ func (R *req) Get(url string) io.ReadCloser {
 	return resp.Body
 }
 
-func (R *req) LoadFile(path string) []byte {
+func (R *Req) LoadFile(path string) []byte {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to read file: %v", err))
@@ -595,4 +613,13 @@ func (R *req) LoadFile(path string) []byte {
 		panic(fmt.Sprintf("Failed to read all: %v", err))
 	}
 	return b
+}
+
+func (R *Req) GetErrorLogger() *log.Logger {
+	logFilePath := filepath.Join(R.dataPath, "batch", R.batchId, "failed_to_emebedding.log")
+	logFile, err := os.Create(logFilePath)
+	if err != nil {
+		panic(err)
+	}
+	return log.New(logFile, "", log.LstdFlags)
 }

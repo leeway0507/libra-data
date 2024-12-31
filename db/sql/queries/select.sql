@@ -13,7 +13,7 @@ SELECT
     recommendation
 FROM books b
 WHERE (
-        b.vectorsearch is false
+        b.vector_search is false
         and b.source is not null
     );
 -- name: GetLibCodFromLibName :one

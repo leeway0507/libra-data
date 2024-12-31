@@ -94,7 +94,7 @@ func TestEmebedding(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var Resp Resp
+		var Resp RespBody
 
 		json.Unmarshal(b, &Resp)
 
