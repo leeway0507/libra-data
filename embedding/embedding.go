@@ -446,43 +446,6 @@ func (R *Req) PreprocessBatchData() error {
 	return nil
 }
 
-func (R *Req) RequestEmbedding(data sqlc.ExtractBooksForEmbeddingRow) (*EmbeddingData, error) {
-	reqBody := R.PrepareEmbeddingRequestBody(&data)
-
-	reqBodyByte, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	url := "https://api.openai.com/v1/embeddings"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBodyByte))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+R.openAIKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var openAIresp RespBody
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return nil, err
-	}
-	json.Unmarshal(body, &openAIresp)
-
-	return &EmbeddingData{
-		Isbn:      data.Isbn.String,
-		Embedding: openAIresp.Data[0].Embedding,
-	}, nil
-}
-
 func (R *Req) PrepareEmbeddingRequestBody(data *sqlc.ExtractBooksForEmbeddingRow) *ReqBody {
 	runes := []rune(data.Title.String +
 		data.Description.String +
@@ -502,7 +465,7 @@ func (R *Req) SaveEmbeddingResp(resp *EmbeddingData) error {
 		Isbn:      resp.Isbn,
 	}
 
-	file, err := os.Create(filepath.Join(R.dataPath, resp.Isbn+".pb"))
+	file, err := os.Create(filepath.Join(R.dataPath, "pb", resp.Isbn+".pb"))
 	if err != nil {
 		fmt.Println("file open error", err)
 		return err
@@ -517,7 +480,7 @@ func (R *Req) SaveEmbeddingResp(resp *EmbeddingData) error {
 }
 
 func (R *Req) LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
-	b := R.LoadFile(filepath.Join(R.dataPath, isbn+".pb"))
+	b := R.LoadFile(filepath.Join(R.dataPath, "pb", isbn+".pb"))
 	embeddingVector := &pb.EmbeddingVector{}
 	err := proto.Unmarshal(b, embeddingVector)
 	if err != nil {
@@ -528,7 +491,7 @@ func (R *Req) LoadEmbeddingData(isbn string) (*pb.EmbeddingVector, error) {
 }
 
 func (R *Req) InsertToDB() error {
-	embeddingPath := filepath.Join(R.dataPath)
+	embeddingPath := filepath.Join(R.dataPath, "pb")
 	entries, err := os.ReadDir(embeddingPath)
 	if err != nil {
 		return err
@@ -622,4 +585,89 @@ func (R *Req) GetErrorLogger() *log.Logger {
 		panic(err)
 	}
 	return log.New(logFile, "", log.LstdFlags)
+}
+
+type QueryResp struct {
+	Query     string
+	Embedding []float32
+}
+
+func (R *Req) RequestQueryEmbedding(query string) (*QueryResp, error) {
+	runes := []rune(query)
+
+	reqBody := &ReqBody{
+		Input: string(runes[0:min(len(runes), maxTokenSize)]),
+		Model: "text-embedding-3-small",
+	}
+
+	reqBodyByte, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	url := "https://api.openai.com/v1/embeddings"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBodyByte))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+R.openAIKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var openAIresp RespBody
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return nil, err
+	}
+	json.Unmarshal(body, &openAIresp)
+	path := filepath.Join(R.dataPath, "query", "temp"+".txt")
+	temp, err := os.Create(path)
+	if err != nil {
+		panic(err)
+	}
+	temp.Write(body)
+
+	return &QueryResp{
+		Query:     query,
+		Embedding: openAIresp.Data[0].Embedding,
+	}, nil
+}
+func (R *Req) SaveQueryEmbedding(queryEmbedding *QueryResp) {
+	path := filepath.Join(R.dataPath, "query", queryEmbedding.Query+".pb")
+
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+		panic("fail to make directories")
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	b, err := proto.Marshal(&pb.QueryEmbedding{
+		Query:     queryEmbedding.Query,
+		Embedding: queryEmbedding.Embedding,
+	})
+	if err != nil {
+		panic(err)
+	}
+	file.Write(b)
+}
+func (R *Req) LoadEmbeddingQuery(query string) (*pb.QueryEmbedding, error) {
+	b := R.LoadFile(filepath.Join(R.dataPath, "query", query+".pb"))
+	embeddingVector := &pb.QueryEmbedding{}
+	err := proto.Unmarshal(b, embeddingVector)
+	if err != nil {
+		return nil, err
+	}
+
+	return embeddingVector, nil
 }

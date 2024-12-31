@@ -108,7 +108,7 @@ func TestEmebedding(t *testing.T) {
 		}
 	})
 	t.Run("load embedding", func(t *testing.T) {
-		_, err := req.LoadEmbeddingData("9788956749808")
+		_, err := req.LoadEmbeddingData("9791156640165")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -22,6 +22,10 @@ message BookRow {
 message BookRows {
   repeated BookRow books = 1; 
 }
+message QueryEmbedding {
+  string query = 1;
+  repeated float embedding = 2;  
+}
 
 // generate code  : protoc --go_out=. libra-data.proto
 
