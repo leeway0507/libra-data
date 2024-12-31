@@ -19,7 +19,7 @@ CREATE TABLE Books (
 CREATE TABLE BookEmbedding (
     ID SERIAL PRIMARY KEY,
     ISBN VARCHAR(15) NOT NULL UNIQUE,
-    embedding vector (1536),
+    embedding vector(1536),
     FOREIGN KEY (ISBN) REFERENCES Books (ISBN) ON DELETE CASCADE
 );
 
