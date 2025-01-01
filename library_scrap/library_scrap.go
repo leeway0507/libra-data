@@ -51,10 +51,10 @@ func ConvertExcelToProto(scrapDate string, dataPath string, workers int) error {
 		go func() {
 			defer wg.Done()
 			for folder := range tasks {
-				// fmt.Println(folder.Name(), "에 대해 작업 중..")
+				// log.Println(folder.Name(), "에 대해 작업 중..")
 				ep := NewExcelToProto(folder, scrapDate, dataPath)
 				requiresProcessing := ep.IsPreprocessingRequired()
-				fmt.Println(folder.Name(), "requiresProcessing", requiresProcessing)
+				log.Println(folder.Name(), "requiresProcessing", requiresProcessing)
 				if requiresProcessing {
 					err := ep.Preprocess()
 					if err != nil {
@@ -79,8 +79,8 @@ func ConvertExcelToProto(scrapDate string, dataPath string, workers int) error {
 func InsertAll(db_url string, dataPath string, scrapDate string, workers int) {
 
 	ctx := context.Background()
-	conn := db.ConnectPG(db_url, ctx)
-	defer conn.Close(ctx)
+	pool := db.ConnectPGPool(db_url, ctx)
+	defer pool.Close()
 
 	folders := LoadLibScrapFolders(dataPath)
 
@@ -90,12 +90,14 @@ func InsertAll(db_url string, dataPath string, scrapDate string, workers int) {
 
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(workerID int) {
 			defer wg.Done()
-			q := sqlc.New(conn)
+			conn := db.ConnectPG(db_url, ctx)
+			defer conn.Close(ctx)
 
+			q := sqlc.New(conn)
 			for folder := range tasks {
-				fmt.Println(i+1, "worker", folder.Name())
+				log.Println(workerID+1, "worker", folder.Name())
 				if !folder.IsDir() {
 					log.Printf("%s is not a dir. \n", folder.Name())
 					continue
@@ -103,7 +105,7 @@ func InsertAll(db_url string, dataPath string, scrapDate string, workers int) {
 				specDataPath := filepath.Join(dataPath, folder.Name())
 				insert(q, scrapDate, specDataPath)
 			}
-		}()
+		}(i)
 	}
 	// 작업 채널에 작업 추가
 	for _, folder := range folders {
@@ -132,7 +134,7 @@ func insert(query *sqlc.Queries, scrapData string, dataPath string) {
 	if err != nil {
 		log.Fatalln("GetLibCodFromLibName : ", err.Error())
 	}
-	err = dbInstance.InsertLibsBooks(data.Books, libCode.Int32)
+	err = dbInstance.InsertLibsBooks(data.Books, libCode.String)
 	if err != nil {
 		log.Fatalln("GetLibCodFromLibName : ", err.Error())
 	}
@@ -173,9 +175,9 @@ func (ep *excelToProto) IsPreprocessingRequired() bool {
 		if slices.Contains(pbList, file.Name()) {
 			// err := os.Remove(filepath.Join(ep.dataPath, ep.scrapDate+".pb"))
 			// if err != nil {
-			// 	fmt.Println(err)
+			// 	log.Println(err)
 			// }
-			// fmt.Println("removed")
+			// log.Println("removed")
 			return false
 		}
 	}
@@ -237,7 +239,7 @@ func (ep *excelToProto) LoadExcelRows() ([][]string, error) {
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 	sheetName := f.GetSheetName(0)
@@ -271,7 +273,7 @@ func NewDB(query *sqlc.Queries, scrapDate string, dataPath string) *DB {
 func (D *DB) Load() (*pb.BookRows, error) {
 	file, err := os.Open(filepath.Join(D.dataPath, D.scrapDate+".pb"))
 	if err != nil {
-		fmt.Println("Load :", err)
+		log.Println("Load :", err)
 		return nil, nil
 	}
 
@@ -300,7 +302,6 @@ func (D *DB) InsertBooks(books []*pb.BookRow) error {
 			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
 			PublicationYear: pgtype.Text{String: book.PublicationYear, Valid: true},
 			Isbn:            pgtype.Text{String: book.Isbn, Valid: true},
-			SetIsbn:         pgtype.Text{String: book.SetIsbn, Valid: true},
 			Volume:          pgtype.Text{String: book.Volume, Valid: true},
 			ImageUrl:        pgtype.Text{Valid: true},
 			Description:     pgtype.Text{Valid: true},
@@ -312,19 +313,19 @@ func (D *DB) InsertBooks(books []*pb.BookRow) error {
 		_, err := D.query.InsertBooks(ctx, book)
 		if err != nil {
 			b, _ := json.Marshal(book)
-			fmt.Println(string(b))
+			log.Println(string(b))
 			return err
 		}
 	}
 
 	return nil
 }
-func (D *DB) InsertLibsBooks(books []*pb.BookRow, libCode int32) error {
+func (D *DB) InsertLibsBooks(books []*pb.BookRow, libCode string) error {
 	ctx := context.Background()
 	var bookDB []sqlc.InsertLibsBooksParams
 	for _, book := range books {
 		book := sqlc.InsertLibsBooksParams{
-			LibCode:  pgtype.Int4{Int32: libCode, Valid: true},
+			LibCode:  pgtype.Text{String: libCode, Valid: true},
 			Isbn:     pgtype.Text{String: book.Isbn, Valid: true},
 			ClassNum: pgtype.Text{String: book.ClassNum, Valid: true},
 		}
