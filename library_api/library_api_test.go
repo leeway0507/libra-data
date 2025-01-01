@@ -13,7 +13,7 @@ func TestLibraryAPI(t *testing.T) {
 	cfg := config.GetEnvConfig()
 	testDataPath := filepath.Join(cfg.DATA_PATH, "test", "library_api")
 
-	libAPI := NewReq(111015, "2024-11-01", "2024-11-30", cfg.LIB_API_KEY, testDataPath)
+	libAPI := NewReq("111015", "2024-11-01", "2024-11-30", cfg.LIB_API_KEY, testDataPath)
 	t.Run("test request => preprocess => save", func(t *testing.T) {
 		// today := time.Now().Format(time.DateOnly)
 
@@ -43,7 +43,7 @@ func TestLibraryAPI(t *testing.T) {
 
 		testQuery := sqlc.New(conn)
 
-		const libCode = 127058
+		const libCode = "127058"
 		LibAPIDB := NewDB(testQuery, libCode, testDataPath)
 
 		t.Run("books", func(t *testing.T) {
@@ -53,7 +53,7 @@ func TestLibraryAPI(t *testing.T) {
 			}
 		})
 		t.Run("libInfo", func(t *testing.T) {
-			err := LibAPIDB.InsertLibInfo(filepath.Join(testDataPath, "libinfo-test.json"))
+			err := LibAPIDB.InsertLibraries(filepath.Join(testDataPath, "libinfo-test.json"))
 			if err != nil {
 				t.Fatal(err)
 			}

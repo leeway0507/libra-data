@@ -20,7 +20,7 @@ import (
 )
 
 type Req struct {
-	libCode   int
+	libCode   string
 	startDate string
 	endDate   string
 	dataPath  string
@@ -28,7 +28,7 @@ type Req struct {
 	PageSize  int
 }
 
-func NewReq(libCode int, startDate string, endDate string, libAPIKey string, dataPath string) *Req {
+func NewReq(libCode string, startDate string, endDate string, libAPIKey string, dataPath string) *Req {
 	return &Req{libCode, startDate, endDate, dataPath, libAPIKey, 500}
 }
 
@@ -45,7 +45,7 @@ func (L *Req) RequestAndSave() error {
 
 	// make folders
 	folderName := strings.Join([]string{L.startDate, L.endDate, strconv.Itoa(L.PageSize), strconv.Itoa(totalPage)}, "-")
-	folderPath := filepath.Join(L.dataPath, strconv.Itoa(L.libCode), folderName)
+	folderPath := filepath.Join(L.dataPath, L.libCode, folderName)
 	if _, err = os.ReadDir(folderPath); err != nil {
 		err = os.MkdirAll(folderPath, 0750)
 		if err != nil {
@@ -91,7 +91,7 @@ func (L *Req) RequestBookData(pageNo int, pageSize int) (*BookItemsResponse, err
 	}
 	queryParam := url.Query()
 	queryParam.Set("authKey", L.libAPIKey)
-	queryParam.Set("libCode", strconv.Itoa(L.libCode))
+	queryParam.Set("libCode", L.libCode)
 	queryParam.Set("startDt", L.startDate)
 	queryParam.Set("endDt", L.endDate)
 	queryParam.Set("format", "json")
@@ -151,11 +151,11 @@ func ceilDiv(a, b int) int {
 
 type DB struct {
 	query    *sqlc.Queries
-	libCode  int
+	libCode  string
 	dataPath string
 }
 
-func NewDB(query *sqlc.Queries, libCode int, dataPath string) *DB {
+func NewDB(query *sqlc.Queries, libCode string, dataPath string) *DB {
 	return &DB{
 		query,
 		libCode,
@@ -166,7 +166,7 @@ func NewDB(query *sqlc.Queries, libCode int, dataPath string) *DB {
 func (D *DB) InsertAll(dir string) {
 	// dir := "111007/2021-01-01-2023-12-31-1000-42"
 
-	folderPath := filepath.Join(D.dataPath, strconv.Itoa(D.libCode), dir)
+	folderPath := filepath.Join(D.dataPath, D.libCode, dir)
 	entries, err := os.ReadDir(folderPath)
 	if err != nil {
 		log.Fatalln("Entries : ", err.Error())
@@ -235,7 +235,6 @@ func (D *DB) InsertBooks(jsonPath string) error {
 			Publisher:       pgtype.Text{String: book.Publisher, Valid: true},
 			PublicationYear: pgtype.Text{String: book.PublicationYear, Valid: true},
 			Isbn:            pgtype.Text{String: book.ISBN13, Valid: true},
-			SetIsbn:         pgtype.Text{String: book.SetISBN13, Valid: true},
 			Volume:          pgtype.Text{String: book.Vol, Valid: true},
 			ImageUrl:        pgtype.Text{Valid: true},
 			Description:     pgtype.Text{Valid: true},
@@ -285,7 +284,7 @@ func (D *DB) InsertLibsBooks(jsonPath string) error {
 
 		}
 		book := sqlc.InsertLibsBooksParams{
-			LibCode:   pgtype.Int4{Int32: int32(D.libCode), Valid: true},
+			LibCode:   pgtype.Text{String: D.libCode, Valid: true},
 			Isbn:      pgtype.Text{String: book.ISBN13, Valid: true},
 			ClassNum:  pgtype.Text{String: book.ClassNo, Valid: true},
 			BookCode:  pgtype.Text{String: BookCode, Valid: true},
@@ -305,7 +304,7 @@ func (D *DB) InsertLibsBooks(jsonPath string) error {
 	return nil
 }
 
-func (D *DB) InsertLibInfo(jsonPath string) error {
+func (D *DB) InsertLibraries(jsonPath string) error {
 	var rawData []map[string]string
 	f, err := os.Open(jsonPath)
 	if err != nil {
@@ -324,12 +323,6 @@ func (D *DB) InsertLibInfo(jsonPath string) error {
 
 	var libraries []sqlc.InsertLibrariesParams
 	for _, d := range rawData {
-
-		libCodeInt, err := strconv.ParseInt(d["libCode"], 10, 32)
-		if err != nil {
-			libCodeInt = 0
-		}
-
 		LatitudeFloat, err := strconv.ParseFloat(d["latitude"], 64)
 		if err != nil {
 			return err
@@ -338,25 +331,17 @@ func (D *DB) InsertLibInfo(jsonPath string) error {
 		if err != nil {
 			return err
 		}
-		var bookCountInt int
-		if d["BookCount"] != "-" {
-			bookCountInt, err = strconv.Atoi(d["BookCount"])
-			if err != nil {
-				return err
-			}
-		}
 
 		library := sqlc.InsertLibrariesParams{
-			LibCode:       pgtype.Int4{Int32: int32(libCodeInt), Valid: true},
+			LibCode:       pgtype.Text{String: d["libCode"], Valid: true},
 			LibName:       pgtype.Text{String: d["libName"], Valid: true},
-			LibAddress:    pgtype.Text{String: d["address"], Valid: true},
+			Address:       pgtype.Text{String: d["address"], Valid: true},
 			Tel:           pgtype.Text{String: d["tel"], Valid: true},
 			Latitude:      pgtype.Float8{Float64: LatitudeFloat, Valid: true},
 			Longtitude:    pgtype.Float8{Float64: LongitudeFloat, Valid: true},
 			Homepage:      pgtype.Text{String: d["homepage"], Valid: true},
 			Closed:        pgtype.Text{String: d["closed"], Valid: true},
 			OperatingTime: pgtype.Text{String: d["operatingTime"], Valid: true},
-			BookCount:     pgtype.Int4{Int32: int32(bookCountInt), Valid: true},
 		}
 		libraries = append(libraries, library)
 	}

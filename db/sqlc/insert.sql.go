@@ -20,7 +20,6 @@ INSERT INTO
         Author,
         Publisher,
         Publication_year,
-        set_isbn,
         Volume,
         image_url,
         Description
@@ -33,8 +32,7 @@ VALUES (
         $5,
         $6,
         $7,
-        $8,
-        $9
+        $8
     )
 ON CONFLICT (ISBN) DO NOTHING
 RETURNING
@@ -47,7 +45,6 @@ type InsertBooksParams struct {
 	Author          pgtype.Text
 	Publisher       pgtype.Text
 	PublicationYear pgtype.Text
-	SetIsbn         pgtype.Text
 	Volume          pgtype.Text
 	ImageUrl        pgtype.Text
 	Description     pgtype.Text
@@ -60,7 +57,6 @@ func (q *Queries) InsertBooks(ctx context.Context, arg InsertBooksParams) ([]int
 		arg.Author,
 		arg.Publisher,
 		arg.PublicationYear,
-		arg.SetIsbn,
 		arg.Volume,
 		arg.ImageUrl,
 		arg.Description,
@@ -102,16 +98,15 @@ func (q *Queries) InsertEmbeddings(ctx context.Context, arg InsertEmbeddingsPara
 }
 
 type InsertLibrariesParams struct {
-	LibCode       pgtype.Int4
+	LibCode       pgtype.Text
 	LibName       pgtype.Text
-	LibAddress    pgtype.Text
+	Address       pgtype.Text
 	Tel           pgtype.Text
 	Latitude      pgtype.Float8
 	Longtitude    pgtype.Float8
 	Homepage      pgtype.Text
 	Closed        pgtype.Text
 	OperatingTime pgtype.Text
-	BookCount     pgtype.Int4
 }
 
 const insertLibsBooks = `-- name: InsertLibsBooks :many
@@ -131,7 +126,7 @@ RETURNING
 `
 
 type InsertLibsBooksParams struct {
-	LibCode   pgtype.Int4
+	LibCode   pgtype.Text
 	Isbn      pgtype.Text
 	ClassNum  pgtype.Text
 	BookCode  pgtype.Text

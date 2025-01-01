@@ -60,7 +60,7 @@ func (q *Queries) ExtractBooksForEmbedding(ctx context.Context) ([]ExtractBooksF
 }
 
 const getBooks = `-- name: GetBooks :many
-SELECT id, isbn, title, author, publisher, publication_year, set_isbn, volume, image_url, description, recommendation, toc, source, url, vector_search FROM Books
+SELECT id, isbn, title, author, publisher, publication_year, volume, image_url, description, recommendation, toc, source, url, vector_search FROM Books
 `
 
 func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
@@ -79,7 +79,6 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 			&i.Author,
 			&i.Publisher,
 			&i.PublicationYear,
-			&i.SetIsbn,
 			&i.Volume,
 			&i.ImageUrl,
 			&i.Description,
@@ -100,7 +99,7 @@ func (q *Queries) GetBooks(ctx context.Context) ([]Book, error) {
 }
 
 const getBooksFromIsbn = `-- name: GetBooksFromIsbn :one
-SELECT id, isbn, title, author, publisher, publication_year, set_isbn, volume, image_url, description, recommendation, toc, source, url, vector_search FROM Books WHERE isbn = $1
+SELECT id, isbn, title, author, publisher, publication_year, volume, image_url, description, recommendation, toc, source, url, vector_search FROM Books WHERE isbn = $1
 `
 
 func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book, error) {
@@ -113,7 +112,6 @@ func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book,
 		&i.Author,
 		&i.Publisher,
 		&i.PublicationYear,
-		&i.SetIsbn,
 		&i.Volume,
 		&i.ImageUrl,
 		&i.Description,
@@ -130,15 +128,15 @@ const getLibCodFromLibName = `-- name: GetLibCodFromLibName :one
 SELECT lib_code FROM libraries WHERE lib_name = $1
 `
 
-func (q *Queries) GetLibCodFromLibName(ctx context.Context, libName pgtype.Text) (pgtype.Int4, error) {
+func (q *Queries) GetLibCodFromLibName(ctx context.Context, libName pgtype.Text) (pgtype.Text, error) {
 	row := q.db.QueryRow(ctx, getLibCodFromLibName, libName)
-	var lib_code pgtype.Int4
+	var lib_code pgtype.Text
 	err := row.Scan(&lib_code)
 	return lib_code, err
 }
 
 const searchFromBooks = `-- name: SearchFromBooks :many
-SELECT id, isbn, title, author, publisher, publication_year, set_isbn, volume, image_url, description, recommendation, toc, source, url, vector_search FROM books
+SELECT id, isbn, title, author, publisher, publication_year, volume, image_url, description, recommendation, toc, source, url, vector_search FROM books
 WHERE author LIKE '%$1%' OR title LIKE '%$1%'
 ORDER BY ((bigm_similarity(author, $1) + bigm_similarity(title, $1))*10) DESC
 limit 50
@@ -160,7 +158,6 @@ func (q *Queries) SearchFromBooks(ctx context.Context, bigmSimilarity interface{
 			&i.Author,
 			&i.Publisher,
 			&i.PublicationYear,
-			&i.SetIsbn,
 			&i.Volume,
 			&i.ImageUrl,
 			&i.Description,

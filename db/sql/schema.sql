@@ -5,7 +5,6 @@ CREATE TABLE Books (
     Author VARCHAR(512),
     Publisher VARCHAR(255),
     Publication_Year VARCHAR(50),
-    Set_ISBN VARCHAR(255),
     Volume VARCHAR(50),
     Image_URL VARCHAR(512),
     Description TEXT,
@@ -25,21 +24,20 @@ CREATE TABLE BookEmbedding (
 
 CREATE TABLE Libraries (
     ID SERIAL PRIMARY KEY,
-    Lib_Code INTEGER UNIQUE,
+    Lib_Code VARCHAR(20) UNIQUE,
     Lib_Name VARCHAR(100),
-    Lib_Address VARCHAR(255),
+    address VARCHAR(255),
     Tel VARCHAR(100),
     Latitude FLOAT,
-    Longtitude FLOAT,
+    Longitude FLOAT,
     Homepage VARCHAR(100),
     Closed VARCHAR(512),
-    Operating_Time VARCHAR(512),
-    Book_Count INTEGER
+    Operating_Time VARCHAR(512)
 );
 
 CREATE TABLE LibsBooks (
     ID SERIAL PRIMARY KEY,
-    Lib_Code INTEGER,
+    Lib_Code VARCHAR(20),
     ISBN VARCHAR(15),
     Class_Num VARCHAR(255),
     Book_Code VARCHAR(100),

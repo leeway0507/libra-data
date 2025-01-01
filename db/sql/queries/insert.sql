@@ -6,7 +6,6 @@ INSERT INTO
         Author,
         Publisher,
         Publication_year,
-        set_isbn,
         Volume,
         image_url,
         Description
@@ -19,8 +18,7 @@ VALUES (
         $5,
         $6,
         $7,
-        $8,
-        $9
+        $8
     )
 ON CONFLICT (ISBN) DO NOTHING
 RETURNING
@@ -46,14 +44,13 @@ INSERT INTO
     Libraries (
         lib_code,
         lib_name,
-        lib_address,
+        address,
         Tel,
         Latitude,
         Longtitude,
         Homepage,
         Closed,
-        operating_time,
-        book_count
+        operating_time
     )
 VALUES (
         $1,
@@ -64,8 +61,7 @@ VALUES (
         $6,
         $7,
         $8,
-        $9,
-        $10
+        $9
     );
 
 -- name: InsertEmbeddings :exec
