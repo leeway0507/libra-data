@@ -82,7 +82,7 @@ def create_book_count():
 def count():
     total = 0
     maxCount = 0
-    with open(f"{os.path.abspath(os.getcwd())}/book_count.csv", "r+") as f:
+    with open(f"{os.path.abspath(os.getcwd())}/data/count.csv", "r+") as f:
         flds = [fld.name for fld in fields(CountResult)]
         reader = csv.DictReader(f, flds)
         for i, line in enumerate(reader):
@@ -98,15 +98,15 @@ def count():
         print(
             "totak price",
             "$",
-            (total / 1000000) * 0.02,
-            f"(kor:{(total / 1000000) * 0.02*1450})",
+            (total / 1000000) * 0.01,
+            f"(kor:{(total / 1000000) * 0.01*1450})",
         )
         print("maxCount", maxCount)
         print("average token", total / reader.line_num)
 
 
 if __name__ == "__main__":
-    create_book_count()
+    # create_book_count()
     count()
 
     # total token 47,113,762

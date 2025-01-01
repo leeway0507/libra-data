@@ -33,3 +33,5 @@ config.go
 /data
 /.vscode
 /token/data
+
+ssh_tunnel.pid
