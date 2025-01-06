@@ -9,8 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/jackc/pgx/v5"
 )
 
 var ALREADY_UPDATED = "U"
@@ -20,10 +18,10 @@ type BookScrap struct {
 	dataPath string
 }
 
-func New(conn *pgx.Conn, dataPath string) *BookScrap {
+func New(query *sqlc.Queries, dataPath string) *BookScrap {
 	return &BookScrap{
-		query:    sqlc.New(conn),
-		dataPath: dataPath,
+		query,
+		dataPath,
 	}
 }
 func (book *BookScrap) DistributeDataByIsbn(scrapPath string) error {
@@ -77,11 +75,11 @@ func (book *BookScrap) InsertToDB() error {
 		fileName := entry.Name()
 		_, isJson := strings.CutSuffix(fileName, ".json")
 		if !isJson {
-			log.Println("found not json file", fileName)
+			log.Println("found non json file", fileName)
 			continue
 		}
 		if fileName[:1] == ALREADY_UPDATED {
-			log.Printf("%v already updated \n", fileName)
+			// log.Printf("%v already updated \n", fileName)
 			continue
 		}
 		file, err := os.Open(filepath.Join(book.dataPath, fileName))
