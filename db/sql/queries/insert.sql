@@ -30,11 +30,9 @@ INSERT INTO
         lib_code,
         isbn,
         class_num,
-        book_code,
-        shelf_code,
-        shelf_name
+        scrap
     )
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (isbn, lib_code) DO NOTHING
 RETURNING
     ID;
@@ -47,7 +45,7 @@ INSERT INTO
         address,
         Tel,
         Latitude,
-        Longtitude,
+        Longitude,
         Homepage,
         Closed,
         operating_time

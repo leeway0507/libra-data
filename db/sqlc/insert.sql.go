@@ -103,7 +103,7 @@ type InsertLibrariesParams struct {
 	Address       pgtype.Text
 	Tel           pgtype.Text
 	Latitude      pgtype.Float8
-	Longtitude    pgtype.Float8
+	Longitude     pgtype.Float8
 	Homepage      pgtype.Text
 	Closed        pgtype.Text
 	OperatingTime pgtype.Text
@@ -115,23 +115,19 @@ INSERT INTO
         lib_code,
         isbn,
         class_num,
-        book_code,
-        shelf_code,
-        shelf_name
+        scrap
     )
-VALUES ($1, $2, $3, $4, $5, $6)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (isbn, lib_code) DO NOTHING
 RETURNING
     ID
 `
 
 type InsertLibsBooksParams struct {
-	LibCode   pgtype.Text
-	Isbn      pgtype.Text
-	ClassNum  pgtype.Text
-	BookCode  pgtype.Text
-	ShelfCode pgtype.Text
-	ShelfName pgtype.Text
+	LibCode  pgtype.Text
+	Isbn     pgtype.Text
+	ClassNum pgtype.Text
+	Scrap    pgtype.Bool
 }
 
 func (q *Queries) InsertLibsBooks(ctx context.Context, arg InsertLibsBooksParams) ([]int32, error) {
@@ -139,9 +135,7 @@ func (q *Queries) InsertLibsBooks(ctx context.Context, arg InsertLibsBooksParams
 		arg.LibCode,
 		arg.Isbn,
 		arg.ClassNum,
-		arg.BookCode,
-		arg.ShelfCode,
-		arg.ShelfName,
+		arg.Scrap,
 	)
 	if err != nil {
 		return nil, err

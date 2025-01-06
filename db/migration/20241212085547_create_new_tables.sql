@@ -35,8 +35,8 @@ CREATE TABLE LibsBooks (
     BookCode VARCHAR(100),
     ShelfCode VARCHAR(100),
     ShelfName VARCHAR(100),
-    FOREIGN KEY (LibCode) REFERENCES Libraries (LibCode) ON DELETE CASCADE,
-    FOREIGN KEY (ISBN) REFERENCES Books (ISBN) ON DELETE CASCADE,
+    FOREIGN KEY (LibCode) REFERENCES Libraries (LibCode),
+    FOREIGN KEY (ISBN) REFERENCES Books (ISBN),
     UNIQUE (LibCode, ISBN)
 );
 -- +goose StatementEnd

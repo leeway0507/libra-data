@@ -34,7 +34,7 @@ func (r iteratorForInsertLibraries) Values() ([]interface{}, error) {
 		r.rows[0].Address,
 		r.rows[0].Tel,
 		r.rows[0].Latitude,
-		r.rows[0].Longtitude,
+		r.rows[0].Longitude,
 		r.rows[0].Homepage,
 		r.rows[0].Closed,
 		r.rows[0].OperatingTime,
@@ -46,5 +46,5 @@ func (r iteratorForInsertLibraries) Err() error {
 }
 
 func (q *Queries) InsertLibraries(ctx context.Context, arg []InsertLibrariesParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"libraries"}, []string{"lib_code", "lib_name", "address", "tel", "latitude", "longtitude", "homepage", "closed", "operating_time"}, &iteratorForInsertLibraries{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"libraries"}, []string{"lib_code", "lib_name", "address", "tel", "latitude", "longitude", "homepage", "closed", "operating_time"}, &iteratorForInsertLibraries{rows: arg})
 }

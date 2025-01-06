@@ -18,7 +18,7 @@ CREATE TABLE Books (
 CREATE TABLE BookEmbedding (
     ID SERIAL PRIMARY KEY,
     ISBN VARCHAR(15) NOT NULL UNIQUE,
-    embedding vector(1536),
+    embedding vector (1536),
     FOREIGN KEY (ISBN) REFERENCES Books (ISBN) ON DELETE CASCADE
 );
 
@@ -40,9 +40,7 @@ CREATE TABLE LibsBooks (
     Lib_Code VARCHAR(20),
     ISBN VARCHAR(15),
     Class_Num VARCHAR(255),
-    Book_Code VARCHAR(100),
-    Shelf_Code VARCHAR(100),
-    Shelf_Name VARCHAR(100),
+    scrap BOOLEAN,
     FOREIGN KEY (LibCode) REFERENCES Libraries (LibCode) ON DELETE CASCADE,
     FOREIGN KEY (ISBN) REFERENCES Books (ISBN) ON DELETE CASCADE,
     UNIQUE (LibCode, ISBN)

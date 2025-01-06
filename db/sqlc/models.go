@@ -39,18 +39,16 @@ type Library struct {
 	Address       pgtype.Text
 	Tel           pgtype.Text
 	Latitude      pgtype.Float8
-	Longtitude    pgtype.Float8
+	Longitude     pgtype.Float8
 	Homepage      pgtype.Text
 	Closed        pgtype.Text
 	OperatingTime pgtype.Text
 }
 
 type Libsbook struct {
-	ID        int32
-	LibCode   pgtype.Text
-	Isbn      pgtype.Text
-	ClassNum  pgtype.Text
-	BookCode  pgtype.Text
-	ShelfCode pgtype.Text
-	ShelfName pgtype.Text
+	ID       int32
+	LibCode  pgtype.Text
+	Isbn     pgtype.Text
+	ClassNum pgtype.Text
+	Scrap    pgtype.Bool
 }

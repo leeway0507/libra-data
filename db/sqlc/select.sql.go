@@ -124,6 +124,72 @@ func (q *Queries) GetBooksFromIsbn(ctx context.Context, isbn pgtype.Text) (Book,
 	return i, err
 }
 
+const getBooksWithoutSource = `-- name: GetBooksWithoutSource :many
+SELECT isbn
+FROM Books
+WHERE
+    source is null
+    AND ISBN LIKE '97889%'
+    OR ISBN LIKE '97989%'
+ORDER BY isbn ASC
+LIMIT 10000
+`
+
+func (q *Queries) GetBooksWithoutSource(ctx context.Context) ([]pgtype.Text, error) {
+	rows, err := q.db.Query(ctx, getBooksWithoutSource)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.Text
+	for rows.Next() {
+		var isbn pgtype.Text
+		if err := rows.Scan(&isbn); err != nil {
+			return nil, err
+		}
+		items = append(items, isbn)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getBooksWithoutToc = `-- name: GetBooksWithoutToc :many
+SELECT isbn
+FROM Books
+WHERE (
+        source IN ('naver', 'daum')
+    )
+    AND (
+        ISBN LIKE '97889%'
+        OR ISBN LIKE '97989%'
+    )
+    AND toc IS NULL
+ORDER BY isbn ASC
+LIMIT 10000
+`
+
+func (q *Queries) GetBooksWithoutToc(ctx context.Context) ([]pgtype.Text, error) {
+	rows, err := q.db.Query(ctx, getBooksWithoutToc)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.Text
+	for rows.Next() {
+		var isbn pgtype.Text
+		if err := rows.Scan(&isbn); err != nil {
+			return nil, err
+		}
+		items = append(items, isbn)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLibCodFromLibName = `-- name: GetLibCodFromLibName :one
 SELECT lib_code FROM libraries WHERE lib_name = $1
 `
@@ -136,9 +202,16 @@ func (q *Queries) GetLibCodFromLibName(ctx context.Context, libName pgtype.Text)
 }
 
 const searchFromBooks = `-- name: SearchFromBooks :many
-SELECT id, isbn, title, author, publisher, publication_year, volume, image_url, description, recommendation, toc, source, url, vector_search FROM books
-WHERE author LIKE '%$1%' OR title LIKE '%$1%'
-ORDER BY ((bigm_similarity(author, $1) + bigm_similarity(title, $1))*10) DESC
+SELECT id, isbn, title, author, publisher, publication_year, volume, image_url, description, recommendation, toc, source, url, vector_search
+FROM books
+WHERE
+    author LIKE '%$1%'
+    OR title LIKE '%$1%'
+ORDER BY (
+        (
+            bigm_similarity (author, $1) + bigm_similarity (title, $1)
+        ) * 10
+    ) DESC
 limit 50
 `
 
