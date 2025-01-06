@@ -43,3 +43,11 @@ type BookItemsRequest struct {
 	PageSize string `json:"pageSize"`
 	StartDt  string `json:"startDt"`
 }
+
+type BookResp struct {
+	Isbn        string
+	ImageUrl    string
+	Description string
+	Source      string
+	Url         string
+}

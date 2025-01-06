@@ -273,23 +273,10 @@ func (D *DB) InsertLibsBooks(jsonPath string) error {
 
 	var bookDB []sqlc.InsertLibsBooksParams
 	for _, book := range bookJson {
-		var ShelfCode string
-		var ShelfName string
-		var BookCode string
-		arr := book.CallNumbers
-		if len(arr) > 0 && arr[0].CallNumber.ShelfLocCode != "" {
-			ShelfCode = book.CallNumbers[0].CallNumber.ShelfLocCode
-			ShelfName = book.CallNumbers[0].CallNumber.ShelfLocName
-			BookCode = book.CallNumbers[0].CallNumber.BookCode
-
-		}
 		book := sqlc.InsertLibsBooksParams{
-			LibCode:   pgtype.Text{String: D.libCode, Valid: true},
-			Isbn:      pgtype.Text{String: book.ISBN13, Valid: true},
-			ClassNum:  pgtype.Text{String: book.ClassNo, Valid: true},
-			BookCode:  pgtype.Text{String: BookCode, Valid: true},
-			ShelfCode: pgtype.Text{String: ShelfCode, Valid: true},
-			ShelfName: pgtype.Text{String: ShelfName, Valid: true},
+			LibCode:  pgtype.Text{String: D.libCode, Valid: true},
+			Isbn:     pgtype.Text{String: book.ISBN13, Valid: true},
+			ClassNum: pgtype.Text{String: book.ClassNo, Valid: true},
 		}
 		bookDB = append(bookDB, book)
 	}
@@ -338,7 +325,7 @@ func (D *DB) InsertLibraries(jsonPath string) error {
 			Address:       pgtype.Text{String: d["address"], Valid: true},
 			Tel:           pgtype.Text{String: d["tel"], Valid: true},
 			Latitude:      pgtype.Float8{Float64: LatitudeFloat, Valid: true},
-			Longtitude:    pgtype.Float8{Float64: LongitudeFloat, Valid: true},
+			Longitude:     pgtype.Float8{Float64: LongitudeFloat, Valid: true},
 			Homepage:      pgtype.Text{String: d["homepage"], Valid: true},
 			Closed:        pgtype.Text{String: d["closed"], Valid: true},
 			OperatingTime: pgtype.Text{String: d["operatingTime"], Valid: true},
