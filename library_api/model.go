@@ -45,6 +45,8 @@ type BookItemsRequest struct {
 }
 
 type BookResp struct {
+	Title       string
+	Author      string
 	Isbn        string
 	ImageUrl    string
 	Description string

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -70,7 +71,8 @@ func RequestDaumMultiple(query []string, path string, workers int) {
 func RequestDaum(query, dir string) {
 	// check the file exists
 	path := filepath.Join(dir, query+".json")
-	if utils.CheckFileExist(path) {
+	uPath := filepath.Join(dir, "U"+query+".json")
+	if utils.CheckFileExist(path) || utils.CheckFileExist(uPath) {
 		log.Printf("query '%s' exists", query)
 		return
 	}
@@ -130,6 +132,8 @@ func RequestDaum(query, dir string) {
 
 	result := &BookResp{
 		Isbn:        query,
+		Title:       daum.Title,
+		Author:      strings.Join(daum.Authors, " "),
 		ImageUrl:    daum.Thumbnail,
 		Description: daum.Contents,
 		Source:      "daum",

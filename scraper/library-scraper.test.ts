@@ -36,10 +36,6 @@ describe("library scraper", async () => {
                 console.log(value, (value % 5) - 1)
             })
     })
-    it("x", () => {
-        console.log(10 % 5)
-        console.log(10 % 5)
-    })
     it(
         "should move to target page",
         async () => {

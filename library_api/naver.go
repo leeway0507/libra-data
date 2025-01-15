@@ -64,7 +64,8 @@ func RequestNaverMultiple(query []string, path string, workers int) {
 func RequestNaver(query, dir string) {
 	// check the file exists
 	path := filepath.Join(dir, query+".json")
-	if utils.CheckFileExist(path) {
+	uPath := filepath.Join(dir, "U"+query+".json")
+	if utils.CheckFileExist(path) || utils.CheckFileExist(uPath) {
 		log.Printf("query '%s' exists", query)
 		return
 	}
@@ -126,6 +127,8 @@ func RequestNaver(query, dir string) {
 	encoder.SetEscapeHTML(false)
 	result := &BookResp{
 		Isbn:        query,
+		Title:       naver.Title,
+		Author:      naver.Author,
 		ImageUrl:    naver.Image,
 		Description: naver.Description,
 		Source:      "naver",

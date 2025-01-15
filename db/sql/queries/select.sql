@@ -7,27 +7,27 @@ SELECT * FROM Books WHERE isbn = $1;
 -- name: GetBooksWithoutToc :many
 SELECT isbn
 FROM Books
-WHERE (
-        source IN ('naver', 'daum')
-    )
+WHERE (source IN ('naver', 'daum'))
     AND (
-        ISBN LIKE '97889%'
+        ISBN LIKE '97911%'
+        OR ISBN LIKE '97889%'
         OR ISBN LIKE '97989%'
     )
     AND toc IS NULL
-ORDER BY isbn ASC
-LIMIT 10000;
-
+ORDER BY isbn ASC;
 
 -- name: GetBooksWithoutSource :many
 SELECT isbn
 FROM Books
 WHERE
     source is null
-    AND ISBN LIKE '97889%'
+    AND (
+    ISBN LIKE '97911%'
+    OR ISBN LIKE '97889%'
     OR ISBN LIKE '97989%'
+    )
 ORDER BY isbn ASC
-LIMIT 10000;
+LIMIT 11000;
 
 -- name: ExtractBooksForEmbedding :many
 SELECT

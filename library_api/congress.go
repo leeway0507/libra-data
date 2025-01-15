@@ -93,7 +93,7 @@ func RequestCongress(isbns []string, path string, workers int) {
 					continue
 				}
 				congress.ReqeustToc(isbn)
-				time.Sleep(time.Duration(rand.Intn(2)) * time.Second)
+				time.Sleep(time.Duration(rand.Intn(1)) * time.Second)
 			}
 
 		}(i)
@@ -302,7 +302,7 @@ func (c *congress) Insert(fileName string) error {
 		return nil
 	}
 	if slices.Contains([]string{UPDATED, NOT_EXIST_ISBN}, fileName[:1]) {
-		log.Printf("%v already updated \n", fileName)
+		// log.Printf("%v already updated \n", fileName)
 		return nil
 	}
 	b, err := os.ReadFile(filepath.Join(isbnPath, fileName))
@@ -335,7 +335,6 @@ func (c *congress) InsertNoneAll() error {
 	}
 
 	for _, entry := range entries {
-
 		fileName := entry.Name()
 		err := c.InsertNone(fileName)
 		if err != nil {

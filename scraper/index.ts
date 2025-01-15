@@ -1,5 +1,19 @@
-import { scrapIsbns, saveScrapResult, loadTargets, updateTargetResult, randomNumber, initBrowser } from "./book-scraper"
+import { scrapIsbns, saveScrapResult, loadTargets, updateTargetResult, initBrowser } from "./book-scraper"
 import { LibScraper } from "./library-scraper"
+
+
+
+async function main() {
+    await scrapLibraryData()
+}
+main()
+    .catch((err) => {
+        console.error("Error occurred:", err)
+    })
+    .finally(() => {
+        process.exit(0) // 프로세스 강제 종료
+    })
+
 
 async function scrapBookDataFromKyobo() {
     for (let index = 0; index < 1; index++) {
@@ -12,23 +26,12 @@ async function scrapBookDataFromKyobo() {
     }
 }
 async function scrapLibraryData() {
-
     const ctx = await initBrowser()
-    for (let i = 6; i <= 10; i++) {
-        const page = await ctx.newPage()
+    for (let pageNum = 1; pageNum <= 10; pageNum++) {
         const libScraperInstance = new LibScraper(ctx)
-        await libScraperInstance.getDataByPagination(page, i)
+
+        const page = await ctx.newPage()
+        await libScraperInstance.getDataByPagination(page, pageNum)
         await page.close()
     }
 }
-
-async function main() {
-    await scrapLibraryData()
-}
-main()
-    .catch((err) => {
-        console.error("Error occurred:", err)
-    })
-    .finally(() => {
-        process.exit(0) // 프로세스 강제 종료
-    })

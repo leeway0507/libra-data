@@ -57,7 +57,6 @@ export class LibScraper {
 
     async moveToTargetPagination(page: Page, targetPage: number) {
         if (targetPage > 5) {
-            console.log(targetPage, "is more than 5")
             const nextPaginationXPath = "//a[contains(@class, 'next_page')]"
             const loc = page.locator(nextPaginationXPath)
             await loc.first().click()
