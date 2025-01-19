@@ -1,4 +1,4 @@
-package library_api
+package scrap
 
 type BookItemsResponse struct {
 	Docs []struct {

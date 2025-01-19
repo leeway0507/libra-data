@@ -1,9 +1,9 @@
-package library_api
+package scrap
 
 import (
 	"context"
-	"libraData/db"
-	"libraData/db/sqlc"
+	"libraData/pkg/db"
+	"libraData/pkg/db/sqlc"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,12 +15,12 @@ var (
 	isbn         = "9791168330702"
 )
 
-func Test(t *testing.T) {
+func TestCongress(t *testing.T) {
 	conn := db.ConnectPG(cfg.DATABASE_URL, context.Background())
 	query := sqlc.New(conn)
 	congress := NewCongress(query, testDataPath)
 	t.Run("request detail", func(t *testing.T) {
-		congress.RequestDetail(isbn)
+		congress.RequestBookDetail(isbn)
 
 		if _, err := os.Stat(filepath.Join(testDataPath, "detail", isbn+".json")); err != nil {
 			if os.IsNotExist(err) {
@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 		}
 	})
 	t.Run("get isbns", func(t *testing.T) {
-		isbns := congress.GetTargetFromDB()
+		isbns := congress.ExtractBookISBNs()
 		if len(isbns) == 0 {
 			t.Fatal("isbn is 0")
 		}
@@ -45,7 +45,7 @@ func Test(t *testing.T) {
 	})
 	t.Run("request detail failed", func(t *testing.T) {
 		nonExistIsbn := "9788909207683"
-		congress.RequestDetail(nonExistIsbn)
+		congress.RequestBookDetail(nonExistIsbn)
 	})
 	t.Run("request isbn failed", func(t *testing.T) {
 		nonExistIsbn := "9788909207683"

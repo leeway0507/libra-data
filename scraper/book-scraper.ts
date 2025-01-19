@@ -70,7 +70,7 @@ export async function scrapBookData(
     return result.flat(1).filter((x) => x != null)
 }
 
-// 수집 결과를 도서 단위로 저장(ex 9791211111.json)
+// 모든 수집 결과를 실행 시간으로 저장(ex 20241215-112001.json)
 export async function saveResult(data: ScrapData[]): Promise<string[]> {
     const fileName = format(Date.now(), "yyyyMMdd-HHmmss")
     const filePath = path.join(__dirname, "data/kyobo", fileName + ".json")

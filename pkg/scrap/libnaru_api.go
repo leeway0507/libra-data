@@ -1,11 +1,11 @@
-package library_api
+package scrap
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData/db/sqlc"
+	"libraData/pkg/db/sqlc"
 	"log"
 	"net/http"
 	"net/url"
@@ -28,7 +28,7 @@ type Req struct {
 	PageSize  int
 }
 
-func NewReq(libCode string, startDate string, endDate string, libAPIKey string, dataPath string) *Req {
+func NewLibNaru(libCode string, startDate string, endDate string, libAPIKey string, dataPath string) *Req {
 	return &Req{libCode, startDate, endDate, dataPath, libAPIKey, 500}
 }
 

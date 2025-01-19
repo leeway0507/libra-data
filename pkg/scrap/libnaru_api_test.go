@@ -1,19 +1,19 @@
-package library_api
+package scrap
 
 import (
 	"context"
 	"libraData/config"
-	"libraData/db"
-	"libraData/db/sqlc"
+	"libraData/pkg/db"
+	"libraData/pkg/db/sqlc"
 	"path/filepath"
 	"testing"
 )
 
-func TestLibraryAPI(t *testing.T) {
+func TestLibNaruApi(t *testing.T) {
 	cfg := config.GetEnvConfig()
 	testDataPath := filepath.Join(cfg.DATA_PATH, "test", "library_api")
 
-	libAPI := NewReq("111015", "2024-11-01", "2024-11-30", cfg.LIB_API_KEY, testDataPath)
+	libAPI := NewLibNaru("111015", "2024-11-01", "2024-11-30", cfg.LIB_API_KEY, testDataPath)
 	t.Run("test request => preprocess => save", func(t *testing.T) {
 		// today := time.Now().Format(time.DateOnly)
 

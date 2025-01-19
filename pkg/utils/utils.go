@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 )
 
+// 파일명에 업데이트 마크("U") 제거
 func ResetUpdateStatus(path string) {
 	entries, err := os.ReadDir(path)
 	if err != nil {

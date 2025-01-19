@@ -1,4 +1,4 @@
-package library_api
+package scrap
 
 import (
 	"libraData/config"
@@ -16,7 +16,7 @@ func TestDaum(t *testing.T) {
 			"9791192932477",
 			"9791163031970",
 		}
-		RequestDaumMultiple(isbns, testDataPath, 2)
+		RequestDaumAll(isbns, testDataPath, 2)
 	})
 	t.Run("single daum request", func(t *testing.T) {
 		isbn := "9791163034735"

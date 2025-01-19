@@ -1,11 +1,11 @@
-package book_scrap
+package handler
 
 import (
 	"context"
 	"fmt"
 	"libraData/config"
-	"libraData/db"
-	"libraData/db/sqlc"
+	"libraData/pkg/db"
+	"libraData/pkg/db/sqlc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,17 +19,17 @@ func TestBookScrap(t *testing.T) {
 	conn := db.ConnectPG(cfg.DATABASE_TEST_URL, ctx)
 
 	testDataPath := filepath.Join(cfg.DATA_PATH, "test", "book_spec")
-	bookScrapInstance := New(sqlc.New(conn), testDataPath)
+	bookScrapInstance := NewBookSpec(sqlc.New(conn), testDataPath)
 	t.Run("separate scrap result", func(t *testing.T) {
 		const targetPath = "/Users/yangwoolee/repo/libra-data/data/test/scrap/kyobo"
-		err := bookScrapInstance.DistributeDataByIsbn(targetPath)
+		err := bookScrapInstance.SeparateScrapDataByIsbn(targetPath)
 		if err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("update scrap result", func(t *testing.T) {
-		err := bookScrapInstance.InsertToDB()
+		err := bookScrapInstance.InsertScrapData()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,7 +44,7 @@ func TestBookScrap(t *testing.T) {
 			if !isJson {
 				continue
 			}
-			if fileName[:1] != ALREADY_UPDATED {
+			if fileName[:1] != UPDATED {
 				fmt.Println("All files should have U char")
 				continue
 			}

@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData/db/sqlc"
-	"libraData/pb"
+	"libraData/pkg/db/sqlc"
+	"libraData/pkg/pb"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -169,6 +169,7 @@ func (R *Req) CreateBatchReqFile(rawData []sqlc.ExtractBooksForEmbeddingRow) ([]
 	if len(batchList) == 0 {
 		return nil, fmt.Errorf("no batch list")
 	}
+	log.Println("created batch file!")
 	return batchList, nil
 }
 
@@ -196,6 +197,7 @@ func (R *Req) SaveBatchReqFile(batchReq []BatchUploadReq) (string, error) {
 		}
 	}
 	writer.Flush()
+	log.Println("saved batch file:", path)
 	return path, nil
 }
 
@@ -253,6 +255,7 @@ func (R *Req) UploadBatchReqFile() error {
 	}
 	defer f.Close()
 	f.Write(respBody)
+	log.Printf("batchfile upload Result: %#+v\n", string(respBody))
 	return nil
 }
 func (R *Req) ExecuteBatch() error {
@@ -500,11 +503,11 @@ func (R *Req) InsertToDB() error {
 		fileName := entry.Name()
 		isbn, isPB := strings.CutSuffix(fileName, ".pb")
 		if !isPB {
-			log.Println("found non PB file", fileName)
+			// log.Println("found non PB file", fileName)
 			continue
 		}
 		if isbn[:1] == ALREADY_UPDATED {
-			log.Printf("%v is already upldated", fileName)
+			// log.Printf("%v is already upldated", fileName)
 			continue
 		}
 

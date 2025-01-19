@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"libraData/config"
-	sqlc "libraData/db/sqlc"
+	"libraData/pkg/db/sqlc"
 	"testing"
 )
 

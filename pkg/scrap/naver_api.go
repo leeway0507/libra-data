@@ -1,10 +1,10 @@
-package library_api
+package scrap
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData/utils"
+	"libraData/pkg/utils"
 	"log"
 	"math/rand"
 	"net/http"
@@ -35,10 +35,12 @@ type NaverResponse struct {
 	Items         []NaverDocument `json:"items"`
 }
 
-const clientId = "UauaPDLcax0Sp0FdVjvy"
-const clientSecret = "l1UCCd9pF2"
+var (
+	clientId     = os.Getenv("NAVER_ID")
+	clientSecret = os.Getenv("NAVER_SECRET")
+)
 
-func RequestNaverMultiple(query []string, path string, workers int) {
+func RequestNaverAll(query []string, path string, workers int) {
 	tasks := make(chan string, len(query))
 
 	var wg sync.WaitGroup
@@ -62,6 +64,9 @@ func RequestNaverMultiple(query []string, path string, workers int) {
 }
 
 func RequestNaver(query, dir string) {
+	if clientId == "" || clientSecret == "" {
+		log.Fatal("failed to load naver client id or clientSecret from OS ENV")
+	}
 	// check the file exists
 	path := filepath.Join(dir, query+".json")
 	uPath := filepath.Join(dir, "U"+query+".json")

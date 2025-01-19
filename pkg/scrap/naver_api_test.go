@@ -1,4 +1,4 @@
-package library_api
+package scrap
 
 import (
 	"libraData/config"
@@ -16,7 +16,7 @@ func TestNaver(t *testing.T) {
 			"9791192932477",
 			"9791163031970",
 		}
-		RequestNaverMultiple(isbns, testDataPath, 2)
+		RequestNaverAll(isbns, testDataPath, 2)
 	})
 	t.Run("request naver", func(t *testing.T) {
 		isbn := "중국에 통일 제국이 서다"

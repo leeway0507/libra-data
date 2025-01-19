@@ -1,4 +1,4 @@
-package library_scrap
+package handler
 
 import (
 	"fmt"
@@ -22,20 +22,20 @@ func TestProprocess(t *testing.T) {
 			os.Remove(filepath.Join(testDataPath, "가락몰도서관", scrapDate+".pb"))
 		}
 
-		libEntries := LoadLibScrapFolders(testDataPath)
+		libEntries := LoadLibNaruFolders(testDataPath)
 		if len(libEntries) == 0 {
 			t.Fatal("no lib folders")
 		}
 
 		for _, libEntry := range libEntries {
 			ep := NewExcelToProto(libEntry, scrapDate, testDataPath)
-			isPreprocessed := ep.IsPreprocessingRequired()
+			isPreprocessed := ep.IsConvertingRequired()
 
 			if isPreprocessed {
 				continue
 			}
 
-			err := ep.Preprocess()
+			err := ep.Convert()
 			if err != nil {
 				t.Fatal(err)
 			}

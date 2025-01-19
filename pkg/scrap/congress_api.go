@@ -1,4 +1,4 @@
-package library_api
+package scrap
 
 import (
 	"context"
@@ -8,16 +8,15 @@ import (
 	"html"
 	"io"
 	"libraData/config"
-	"libraData/db"
-	"libraData/db/sqlc"
-	"libraData/utils"
+	"libraData/pkg/db"
+	"libraData/pkg/db/sqlc"
+	"libraData/pkg/utils"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -56,7 +55,7 @@ type TOC struct {
 }
 
 var (
-	searchUrl      = "http://apis.data.go.kr/9720000/searchservice/detail"
+	detailUrl      = "http://apis.data.go.kr/9720000/searchservice/detail"
 	tocUrl         = "http://apis.data.go.kr/9720000/detailinfoservice/toc"
 	userAgent      = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 	cfg            = config.GetEnvConfig()
@@ -64,12 +63,7 @@ var (
 	NOT_EXIST_ISBN = "N"
 )
 
-type congress struct {
-	query    *sqlc.Queries
-	dataPath string
-}
-
-func RequestCongress(isbns []string, path string, workers int) {
+func RequestCongressAll(isbns []string, path string, workers int) {
 	ctx := context.Background()
 	pool := db.ConnectPGPool(cfg.DATABASE_URL, ctx)
 	tasks := make(chan string, len(isbns))
@@ -87,13 +81,13 @@ func RequestCongress(isbns []string, path string, workers int) {
 			defer conn.Release()
 			congress := NewCongress(sqlc.New(conn), path)
 			for isbn := range tasks {
-				err := congress.RequestDetail(isbn)
+				err := congress.RequestBookDetail(isbn)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
 				congress.ReqeustToc(isbn)
-				time.Sleep(time.Duration(rand.Intn(1)) * time.Second)
+				time.Sleep(time.Duration(rand.Intn(1000)))
 			}
 
 		}(i)
@@ -105,6 +99,11 @@ func RequestCongress(isbns []string, path string, workers int) {
 	wg.Wait()
 }
 
+type congress struct {
+	query    *sqlc.Queries
+	dataPath string
+}
+
 func NewCongress(query *sqlc.Queries, dataPath string) *congress {
 	return &congress{
 		query,
@@ -112,10 +111,10 @@ func NewCongress(query *sqlc.Queries, dataPath string) *congress {
 	}
 }
 
-func (c *congress) GetTargetFromDB() []string {
+func (c *congress) ExtractBookISBNs() []string {
 	ctx := context.Background()
 	result, err := c.query.GetBooksWithoutToc(ctx)
-	utils.HandleErr(err, "getTargetFromDB")
+	utils.HandleErr(err, "ExtractBookISBNs")
 	isbns := []string{}
 	for _, v := range result {
 		isbns = append(isbns, v.String)
@@ -123,12 +122,12 @@ func (c *congress) GetTargetFromDB() []string {
 	return isbns
 }
 
-func (c *congress) RequestDetail(isbn string) error {
+func (c *congress) RequestBookDetail(isbn string) error {
 	if utils.CheckFileExist(filepath.Join(c.dataPath, "detail", UPDATED+isbn+".json")) {
 		return fmt.Errorf("%s alreay exists", isbn)
 	}
 
-	url, err := url.Parse(searchUrl)
+	url, err := url.Parse(detailUrl)
 	if err != nil {
 		return fmt.Errorf("error: %v", err)
 	}
@@ -157,11 +156,11 @@ func (c *congress) RequestDetail(isbn string) error {
 	if err != nil {
 		return fmt.Errorf("error: %v", err)
 	}
-	c.SaveRespAsJson(b, f)
+	c.SaveDetailResponseAsJson(b, f)
 	return nil
 }
 
-func (c *congress) SaveRespAsJson(data []byte, buf *os.File) {
+func (c *congress) SaveDetailResponseAsJson(data []byte, buf *os.File) {
 	var xmlFile searchResponse
 	err := xml.Unmarshal(data, &xmlFile)
 	if err != nil {
@@ -207,8 +206,6 @@ func (c *congress) ReqeustToc(isbn string) {
 		if err != nil {
 			log.Println(err)
 		}
-		c.InsertNone(isbn)
-
 		return
 	}
 
@@ -239,10 +236,10 @@ func (c *congress) ReqeustToc(isbn string) {
 	b, err = io.ReadAll(resp.Body)
 	utils.HandleErr(err, "readAll")
 
-	c.SaveTocAsJson(b, isbn)
+	c.SaveTocResponseAsJson(b, isbn)
 }
 
-func (c *congress) SaveTocAsJson(data []byte, isbn string) {
+func (c *congress) SaveTocResponseAsJson(data []byte, isbn string) {
 	var xmlFile tocResponse
 	err := xml.Unmarshal(data, &xmlFile)
 	if err != nil {
@@ -274,86 +271,4 @@ func (c *congress) SaveTocAsJson(data []byte, isbn string) {
 	err = os.Rename(filepath.Join(c.dataPath, "detail", isbn+".json"),
 		filepath.Join(c.dataPath, "detail", UPDATED+isbn+".json"))
 	utils.HandleErr(err, "rename")
-}
-
-func (c *congress) InsertAll() error {
-	isbnPath := filepath.Join(c.dataPath, "toc")
-	entries, err := os.ReadDir(isbnPath)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		fileName := entry.Name()
-		err := c.Insert(fileName)
-		if err != nil {
-			utils.HandleErr(err, "insertToDB")
-		}
-
-	}
-	return nil
-}
-
-func (c *congress) Insert(fileName string) error {
-	isbnPath := filepath.Join(c.dataPath, "toc")
-	_, isJson := strings.CutSuffix(fileName, ".json")
-	if !isJson {
-		log.Printf("found non json file %s", fileName)
-		return nil
-	}
-	if slices.Contains([]string{UPDATED, NOT_EXIST_ISBN}, fileName[:1]) {
-		// log.Printf("%v already updated \n", fileName)
-		return nil
-	}
-	b, err := os.ReadFile(filepath.Join(isbnPath, fileName))
-	if err != nil {
-		return err
-	}
-	var jsonArr sqlc.UpdateTocParams
-	if err = json.Unmarshal(b, &jsonArr); err != nil {
-		return err
-	}
-	ctx := context.Background()
-
-	if err = c.query.UpdateToc(ctx, jsonArr); err != nil {
-		return err
-	}
-
-	err = os.Rename(filepath.Join(isbnPath, fileName),
-		filepath.Join(isbnPath, UPDATED+fileName))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *congress) InsertNoneAll() error {
-	isbnPath := filepath.Join(c.dataPath, "toc")
-	entries, err := os.ReadDir(isbnPath)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		fileName := entry.Name()
-		err := c.InsertNone(fileName)
-		if err != nil {
-			log.Printf("err: %#+v\n", err)
-		}
-
-	}
-
-	return nil
-}
-func (c *congress) InsertNone(fileName string) error {
-	ctx := context.Background()
-	if !slices.Contains([]string{NOT_EXIST_ISBN}, fileName[:1]) {
-		return nil
-	}
-	fileName, _ = strings.CutSuffix(fileName, ".json")
-	c.query.UpdateToc(ctx, sqlc.UpdateTocParams{
-		Toc:  pgtype.Text{String: "", Valid: true},
-		Isbn: pgtype.Text{String: fileName[1:], Valid: true},
-	})
-	return nil
 }

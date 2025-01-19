@@ -1,10 +1,10 @@
-package library_api
+package scrap
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"libraData/utils"
+	"libraData/pkg/utils"
 	"log"
 	"math/rand"
 	"net/http"
@@ -42,9 +42,11 @@ type DaumResponse struct {
 	Meta      DaumMeta       `json:"meta"`
 }
 
-var DaumKey = "6b639fdf43c30ffe1705285d0c245654"
+var (
+	DaumKey = os.Getenv("DAUM_KEY")
+)
 
-func RequestDaumMultiple(query []string, path string, workers int) {
+func RequestDaumAll(query []string, path string, workers int) {
 	tasks := make(chan string, len(query))
 
 	var wg sync.WaitGroup
@@ -69,6 +71,9 @@ func RequestDaumMultiple(query []string, path string, workers int) {
 }
 
 func RequestDaum(query, dir string) {
+	if DaumKey == "" {
+		log.Fatal("failed to load daum key from OS ENV")
+	}
 	// check the file exists
 	path := filepath.Join(dir, query+".json")
 	uPath := filepath.Join(dir, "U"+query+".json")

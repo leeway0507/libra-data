@@ -22,9 +22,9 @@ FROM Books
 WHERE
     source is null
     AND (
-    ISBN LIKE '97911%'
-    OR ISBN LIKE '97889%'
-    OR ISBN LIKE '97989%'
+        ISBN LIKE '97911%'
+        OR ISBN LIKE '97889%'
+        OR ISBN LIKE '97989%'
     )
 ORDER BY isbn ASC
 LIMIT 11000;
@@ -40,7 +40,13 @@ FROM books b
 WHERE (
         b.vector_search is false
         and b.source is not null
-    );
+        AND (
+            ISBN LIKE '97911%'
+            OR ISBN LIKE '97889%'
+            OR ISBN LIKE '97989%'
+        )
+    )
+LIMIT 30000;
 -- name: GetLibCodFromLibName :one
 SELECT lib_code FROM libraries WHERE lib_name = $1;
 
