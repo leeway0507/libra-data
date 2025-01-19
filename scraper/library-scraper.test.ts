@@ -13,7 +13,7 @@ describe("library scraper", async () => {
     it(
         "should select location ",
         async () => {
-            const isSelected = await libScraperInstance.selectLocation(newPage)
+            const isSelected = await libScraperInstance.setLocationToSeoul(newPage)
             expect(isSelected).toBe(true)
         },
         { timeout: 10_000 }
@@ -23,19 +23,11 @@ describe("library scraper", async () => {
         async () => {
             await newPage.goto("https://www.data4library.kr/openDataL")
             await newPage.waitForLoadState("domcontentloaded")
-            const isSelected = await libScraperInstance.selectLibType(newPage)
+            const isSelected = await libScraperInstance.setLibTypeToPublic(newPage)
             expect(isSelected).toBe(true)
         },
         { timeout: 10_000 }
     )
-    it("should test rest", () => {
-        Array(10)
-            .fill("")
-            .map((k, v) => {
-                const value = v + 1
-                console.log(value, (value % 5) - 1)
-            })
-    })
     it(
         "should move to target page",
         async () => {
@@ -54,17 +46,18 @@ describe("library scraper", async () => {
         { timeout: 10_000 }
     )
     it(
-        "should get lib data and filter if files exist",
+        "should get lib name at current page",
         async () => {
             await newPage.goto("https://www.data4library.kr/openDataL")
             await newPage.waitForLoadState("networkidle")
             const libArr = await libScraperInstance.getLibList(newPage)
+            expect(libArr.length).toBeGreaterThan(0)
             console.log(libArr)
         },
         { timeout: 10_000 }
     )
     it(
-        "should filter if files exist",
+        "should get lib data and filter if files exist",
         async () => {
             const libArrMock = [
                 {
@@ -78,7 +71,7 @@ describe("library scraper", async () => {
                     nth: 1,
                 },
             ]
-            const libFilteredMock = libScraperInstance.exctractCandidate(libArrMock)
+            const libFilteredMock = libScraperInstance.filterAlreadyScrapLib(libArrMock)
             expect(libFilteredMock.length).toBe(1)
 
             await libScraperInstance.moveToDownloadPage(newPage, libArrMock[0])
@@ -88,7 +81,7 @@ describe("library scraper", async () => {
         { timeout: 10_000 }
     )
     it(
-        "should move to download page",
+        "should move onto download page",
         async () => {
             await newPage.goto("https://www.data4library.kr/openDataL")
             await newPage.waitForLoadState("domcontentloaded")
@@ -106,7 +99,12 @@ describe("library scraper", async () => {
             await libScraperInstance.downloadLibData(newPage, libArrMock)
 
             const isFileExist = fs.existsSync(
-                path.join(process.env.DATA_PATH!, "library", libArrMock.libName, libArrMock.uploadDate + ".xlsx")
+                path.join(
+                    process.env.DATA_PATH!,
+                    "library",
+                    libArrMock.libName,
+                    libArrMock.uploadDate + ".xlsx"
+                )
             )
             expect(isFileExist).toBe(true)
         },

@@ -1,7 +1,11 @@
-import { scrapIsbns, saveScrapResult, loadTargets, updateTargetResult, initBrowser } from "./book-scraper"
+import {
+    scrapBookData,
+    saveResult,
+    loadTargetData,
+    updateTargetStatus,
+    initBrowser,
+} from "./book-scraper"
 import { LibScraper } from "./library-scraper"
-
-
 
 async function main() {
     await scrapLibraryData()
@@ -14,15 +18,14 @@ main()
         process.exit(0) // 프로세스 강제 종료
     })
 
-
 async function scrapBookDataFromKyobo() {
     for (let index = 0; index < 1; index++) {
-        const targetIsbns = await loadTargets().then((a) => a.slice(0, 8))
-        const scrapResult = await scrapIsbns(targetIsbns, 8, true)
-        const resultIsbns = await saveScrapResult(scrapResult)
+        const targetIsbns = await loadTargetData().then((a) => a.slice(0, 8))
+        const scrapResult = await scrapBookData(targetIsbns, 8, true)
+        const resultIsbns = await saveResult(scrapResult)
 
         console.log("scrap Length :", resultIsbns.length)
-        await updateTargetResult(targetIsbns, resultIsbns)
+        await updateTargetStatus(targetIsbns, resultIsbns)
     }
 }
 async function scrapLibraryData() {

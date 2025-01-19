@@ -13,23 +13,21 @@ type LibScrap = {
     nth: number
 }
 
+// 도서관 정보나루의 데이터 제공 페이지, 도서관 별 장서 대출 xlsx 파일 수집
 export class LibScraper {
-    ctx!: BrowserContext
+    ctx!: BrowserContext //playwright
 
     constructor(page: BrowserContext) {
         this.ctx = page
     }
 
-    // async exec() {
-    //     const page = await this.ctx.newPage()
-    // }
-
+    // 현재 페이지의 도서관 데이터 방문 및 파일 다운로드
     async getDataByPagination(page: Page, targetPage: number) {
-        await this.selectLocation(page)
-        await this.selectLibType(page)
+        await this.openPage(page)
+        await this.setFilterOption(page)
         await this.moveToTargetPagination(page, targetPage)
         const libList: LibScrap[] = await this.getLibList(page)
-        const libFilteredList: LibScrap[] = this.exctractCandidate(libList)
+        const libFilteredList: LibScrap[] = this.filterAlreadyScrapLib(libList)
 
         if (libFilteredList.length > 0) {
             for (const libScrap of libFilteredList) {
@@ -41,15 +39,23 @@ export class LibScraper {
         }
     }
 
-    async selectLocation(page: Page): Promise<boolean> {
+    async openPage(page: Page) {
         await page.goto("https://www.data4library.kr/openDataL")
         await page.waitForLoadState("domcontentloaded")
+    }
+
+    async setFilterOption(page: Page) {
+        await this.setLocationToSeoul(page)
+        await this.setLibTypeToPublic(page)
+    }
+
+    async setLocationToSeoul(page: Page): Promise<boolean> {
         const x = await page.selectOption("#p_region", "서울")
         await page.waitForLoadState("networkidle")
         return x.length > 0 && x[0] === "11"
     }
 
-    async selectLibType(page: Page): Promise<boolean> {
+    async setLibTypeToPublic(page: Page): Promise<boolean> {
         const x = await page.selectOption("#libType", "공공")
         await page.waitForLoadState("networkidle")
         return x.length > 0
@@ -69,6 +75,7 @@ export class LibScraper {
         await page.waitForLoadState("networkidle")
     }
 
+    // 현재 페이지 내 존재하는 도서관 목록 확보
     async getLibList(page: Page): Promise<LibScrap[]> {
         const tableXpath = "//tbody/tr"
         const libNameXpath = "//td[@class='link_td']/a"
@@ -88,7 +95,9 @@ export class LibScraper {
             })
         )
     }
-    exctractCandidate(libList: LibScrap[]): LibScrap[] {
+
+    // 도서관 목록에서 기존 수집 완료된 도서관 제거
+    filterAlreadyScrapLib(libList: LibScrap[]): LibScrap[] {
         const isCandidate = (l: LibScrap) => {
             const folderPath = path.join(process.env.DATA_PATH!, "library", l.libName)
             const filePath = path.join(folderPath, l.uploadDate + ".xlsx")
@@ -97,11 +106,13 @@ export class LibScraper {
 
         return libList.filter(isCandidate)
     }
+
     async moveToDownloadPage(page: Page, libData: LibScrap) {
         const libNameXpath = "//td[@class='link_td']/a"
         await page.locator(libNameXpath).nth(libData.nth).click()
         await page.waitForLoadState("networkidle")
     }
+
     async downloadLibData(page: Page, libData: LibScrap) {
         const dateXpath = "//section/div[2]/div[3]/table/tbody/tr[1]/td[3]"
         const loc = page.locator(dateXpath)

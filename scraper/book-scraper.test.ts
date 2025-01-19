@@ -1,14 +1,14 @@
-import { kyoboScraper, initBrowser, scrapIsbns, updateTargetResult } from "./book-scraper"
+import { kyoboScraper, initBrowser, scrapBookData, updateTargetStatus } from "./book-scraper"
 import { expectTypeOf } from "expect-type"
 import path from "path"
 import { describe, test as it, expect } from "bun:test"
 import fsSync from "fs"
 
-describe("multi page scrap using book scraper", () => {
+describe("multi pages scrap using book scraper", () => {
     it(
-        "should execute multi page ",
+        "should scrap by multi pages",
         async () => {
-            await scrapIsbns(["9791163034735", "9791163034735"], 2)
+            await scrapBookData(["9791163034735", "9791163034735"], 2)
         },
         { timeout: 10_000 }
     )
@@ -16,7 +16,7 @@ describe("multi page scrap using book scraper", () => {
     it("should update target ", async () => {
         const target = ["1234", "5678"]
         const result = ["1234"]
-        await updateTargetResult(target, result)
+        await updateTargetStatus(target, result)
     })
 })
 
@@ -31,7 +31,7 @@ describe("book scraper", async () => {
     const specPath = `file://${__dirname}/temp/test/kyobo/${scraper.isbn}.html`
 
     it(
-        "should loadWebSpecPage ",
+        "should load Web Spec Page ",
         async () => {
             const isloaded = await scraper.loadWebSpecPage()
             expect(isloaded).toBe(true)
@@ -39,8 +39,13 @@ describe("book scraper", async () => {
         { timeout: 10_000 }
     )
 
+    it("should load Local Spec Page ", async () => {
+        const isloaded = await scraper.loadLocalSpecPage()
+        expect(isloaded).toBe(true)
+    })
+
     it(
-        "should loadSpecPage ",
+        "should load Spec Page ",
         async () => {
             const isloaded = await scraper.loadSpecPage()
             expect(isloaded[0]).toBe(true)
@@ -48,45 +53,48 @@ describe("book scraper", async () => {
         { timeout: 10_000 }
     )
 
-    it("should saveBookHtml ", async () => {
+    it("should save Book Html ", async () => {
         await scraper.page.goto(specPath)
         await scraper.saveHtml()
 
-        const localFilePath = path.join(scraper.dataPath, scraper.scraperName, scraper.isbn + ".html")
+        const localFilePath = path.join(
+            scraper.dataPath,
+            scraper.scraperName,
+            scraper.isbn + ".html"
+        )
         expect(fsSync.existsSync(localFilePath)).toBe(true)
         // if (fsSync.existsSync(localFilePath)) {
         //     fsSync.rmSync(localFilePath)
         // }
-    })
-    it("should loadLocalSpecPage ", async () => {
-        const isloaded = await scraper.loadLocalSpecPage()
-        expect(isloaded).toBe(true)
     })
     it("should get image url", async () => {
         await scraper.page.goto(specPath)
         await scraper.extractImageSrc()
     })
 
-    it("should saveImage ", async () => {
+    it("should save Image file ", async () => {
         await scraper.page.goto(specPath)
 
         expect(await scraper.saveImage()).toBe(true)
     })
 
-    it("should extract bookinfo", async () => {
+    it("should extract book info", async () => {
         await scraper.page.goto(specPath)
 
-        expectTypeOf(await scraper.extractData()).toMatchTypeOf({
+        expectTypeOf(await scraper.extractDataFromSpecPage()).toMatchTypeOf({
             isbn: "string",
             toc: "string",
             recommendation: "string",
             description: "string",
             source: "string",
             url: "string",
+            author: "string",
+            title: "string",
+            imageUrl: "string",
         })
     })
 
-    it("should searchBook ", async () => {
+    it("should search Book ", async () => {
         const url = await scraper.searchBook(searchPath)
         expect(url).toEqual("https://product.kyobobook.co.kr/detail/S000202532365")
     })

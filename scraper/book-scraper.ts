@@ -6,8 +6,6 @@ import pino, { type Logger } from "pino"
 import pretty from "pino-pretty"
 import { format } from "date-fns"
 
-const SEARCH_URL = "https://search.kyobobook.co.kr/search?gbCode=TOT&target=total"
-
 export async function initBrowser(headless: boolean = false): Promise<BrowserContext> {
     const bravePath = "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
     const browser = await chromium.launch({
@@ -17,69 +15,80 @@ export async function initBrowser(headless: boolean = false): Promise<BrowserCon
     return await browser.newContext()
 }
 
-export async function loadTargets(): Promise<string[]> {
+// 수집할 도서 데이터 로드(target.csv)
+export async function loadTargetData(): Promise<string[]> {
     const targetFile = Bun.file(path.join(__dirname, "data/target", "target.csv"))
     const targetText = await targetFile.text()
-    var csvArr = targetText.split("\n")
+    var csvData = targetText.split("\n")
 
-    if (csvArr[0] !== "isbn,status") {
-        const newCsvArr = addStatusColumn(csvArr)
-        await Bun.write(targetFile, newCsvArr.join("\n"))
-        csvArr = newCsvArr
+    if (csvData[0] !== "isbn,status") {
+        const newCsvData = filterUnusedColumns(csvData)
+        await Bun.write(targetFile, newCsvData.join("\n"))
+        csvData = newCsvData
     }
-    csvArr.shift() // drop header
-    return csvArr.reduce((acc, row) => {
-        const cols = row.split(",")
-        if (cols[1] === "N") {
-            acc.push(cols[0])
+    csvData.shift() // drop header
+    return csvData.reduce((acc, row) => {
+        const [isbn, isScraped] = row.split(",")
+        if (isScraped === "N") {
+            acc.push(isbn)
         }
         return acc
     }, [] as string[])
 }
 
-function addStatusColumn(csvArr: string[]): string[] {
+function filterUnusedColumns(csvArr: string[]): string[] {
     csvArr.shift() // drop header
     return ["isbn,status", ...csvArr.map((row) => [row.replace(/^\"|\"$/g, ""), "N"].join(","))]
 }
 
-export async function scrapIsbns(isbns: string[], numWorker: number, headless: boolean = false): Promise<ScrapData[]> {
+export async function scrapBookData(
+    isbns: string[],
+    numWorker: number,
+    headless: boolean = false
+): Promise<ScrapData[]> {
     const ctx = await initBrowser(headless)
     ctx.setDefaultTimeout(20000)
-    const chunck = Math.ceil(isbns.length / numWorker)
-    const isbnsChunk = Array(numWorker)
+
+    // 타겟 데이터를 워커 수에 맞게 분배
+    const workerChunkSize = Math.ceil(isbns.length / numWorker)
+    const chunkedTargetArr = Array(numWorker)
         .fill("")
-        .map((_, idx) => isbns.slice(idx * chunck, (idx + 1) * chunck))
+        .map((_, idx) => isbns.slice(idx * workerChunkSize, (idx + 1) * workerChunkSize))
         .filter((item) => item.length > 0)
 
-    const _numWorker = Math.min(isbnsChunk.length, numWorker)
+    const _numWorker = Math.min(chunkedTargetArr.length, numWorker)
     const workers = await Promise.all(
         Array(_numWorker)
             .fill(null)
             .map(async () => new kyoboScraper(await ctx.newPage()))
     )
 
-    const result = await Promise.all(workers.map((worker, idx) => worker.execAll(isbnsChunk[idx])))
+    const result = await Promise.all(
+        workers.map((worker, idx) => worker.execAll(chunkedTargetArr[idx]))
+    )
     await ctx.close()
     return result.flat(1).filter((x) => x != null)
 }
 
-export async function saveScrapResult(data: ScrapData[]): Promise<string[]> {
+// 수집 결과를 도서 단위로 저장(ex 9791211111.json)
+export async function saveResult(data: ScrapData[]): Promise<string[]> {
     const fileName = format(Date.now(), "yyyyMMdd-HHmmss")
     const filePath = path.join(__dirname, "data/kyobo", fileName + ".json")
     await Bun.write(filePath, JSON.stringify(data), { createPath: true })
     return data.map((d) => d.isbn)
 }
 
-export async function updateTargetResult(targetArr: string[], resultArr: string[]) {
+// 수집 상태를 업데이트(성공 : Y, 도서를 찾을 수 없음 : notFound)
+export async function updateTargetStatus(targetIsbns: string[], resultIsbns: string[]) {
+    const resultIsbnSet = new Set(resultIsbns)
+    const notFoundSet = new Set(targetIsbns.filter((t) => !resultIsbnSet.has(t)))
+
     const targetFile = Bun.file(path.join(__dirname, "data/target", "target.csv"))
     const targetText = await targetFile.text()
-    var csvArr = targetText.split("\n")
-
-    const resultIsbnSet = new Set(resultArr)
-    const notFoundSet = new Set(targetArr.filter((t) => !resultIsbnSet.has(t)))
-
-    const newCsvArr = csvArr.map((rowStr) => {
+    var csvData = targetText.split("\n")
+    const newCsvData = csvData.map((rowStr) => {
         const row = rowStr.split(",")
+
         if (resultIsbnSet.has(row[0])) {
             row.pop()
             row.push("Y")
@@ -90,19 +99,23 @@ export async function updateTargetResult(targetArr: string[], resultArr: string[
         return row.join(",")
     })
 
-    await Bun.write(targetFile, newCsvArr.join("\n"))
+    await Bun.write(targetFile, newCsvData.join("\n"))
 }
 
 export type ScrapData = {
+    title: string
+    author: string
     isbn: string
     toc: string
     recommendation: string
     description: string
     source: string
     url: string
+    imageUrl: string
 }
 
 interface BookScraper {
+    execAll(isbns: string[] | undefined): Promise<(ScrapData | null)[]>
     exec(): Promise<ScrapData | null>
     loadSpecPage(): Promise<[Boolean, "local" | "web" | null]>
     loadLocalSpecPage(): Promise<boolean>
@@ -110,11 +123,11 @@ interface BookScraper {
     saveHtml(): void
     saveImage(): Promise<boolean>
     searchBook(searchURL: string): Promise<string>
-    extractData(): Promise<ScrapData>
+    extractDataFromSpecPage(): Promise<ScrapData>
 }
 
 const LoggingFile = pino.destination({
-    dest: path.join(__dirname, "scraplogger.log"),
+    dest: path.join(__dirname, "kyobo_scraper.log"),
     append: "stack",
 })
 
@@ -129,6 +142,8 @@ const LoggerInstance: Logger = pino(
     ])
 )
 
+const SEARCH_URL = "https://search.kyobobook.co.kr/search?gbCode=TOT&target=total"
+
 export class kyoboScraper implements BookScraper {
     page!: Page
     isbn!: string
@@ -140,6 +155,7 @@ export class kyoboScraper implements BookScraper {
         this.page = page
     }
 
+    // 모든 isbns에 대한 수집
     async execAll(isbns: string[] | undefined): Promise<(ScrapData | null)[]> {
         if (!isbns) return []
         const result: (ScrapData | null)[] = []
@@ -149,7 +165,7 @@ export class kyoboScraper implements BookScraper {
         }
         return result
     }
-
+    // 개별 isbns에 대한 수집
     async exec(): Promise<ScrapData | null> {
         const [isSpecPageLoaded, loadType] = await this.loadSpecPage()
         if (!isSpecPageLoaded) {
@@ -158,9 +174,13 @@ export class kyoboScraper implements BookScraper {
         }
         loadType === "web" && (await this.saveHtml())
         loadType === "web" && (await this.saveImage())
-        return await this.extractData()
+        return await this.extractDataFromSpecPage()
     }
 
+    // 도서 상세 페이지를 브라우저에 로드.
+    // 도서를 최초 수집 시 이미지와 html 파일 로컬에 저장
+    // 신규 도서의 경우 web에서 도서 상세페이지 로드
+    // 기 수집 도서를 불러 올 경우 local에서 도서 상세페이지 로드,
     async loadSpecPage(): Promise<[Boolean, "local" | "web" | null]> {
         const isLocalLoaded = await this.loadLocalSpecPage()
         if (isLocalLoaded) {
@@ -176,8 +196,14 @@ export class kyoboScraper implements BookScraper {
         }
         return [false, null]
     }
+
     async loadLocalSpecPage(): Promise<boolean> {
-        const localFilePath = path.join(this.dataPath, this.scraperName, "html", this.isbn + ".html")
+        const localFilePath = path.join(
+            this.dataPath,
+            this.scraperName,
+            "html",
+            this.isbn + ".html"
+        )
         if (await Bun.file(localFilePath).exists()) {
             this.logger.debug({
                 localFilePath: path.join("file://", localFilePath),
@@ -188,19 +214,41 @@ export class kyoboScraper implements BookScraper {
         this.logger.debug("localPath : not exist")
         return false
     }
+
     async loadWebSpecPage(): Promise<boolean> {
         const searchURL = new URL(SEARCH_URL)
         searchURL.searchParams.set("keyword", this.isbn)
         this.logger.debug({ searchURL }, "loadWebSpecPage")
+
         const specUrl = await this.searchBook(searchURL.toString())
         this.logger.debug({ specUrl }, "loadWebSpecPage")
         if (specUrl === "") return false
         await this.page.goto(specUrl)
         return true
     }
+
+    // 해당 도서의 상세 페이지에 접근하기 위해 도서 검색 후 상세 페이지 url 수집
+    async searchBook(searchURL: string): Promise<string> {
+        await this.page.goto(searchURL)
+        await this.page.waitForLoadState("domcontentloaded")
+
+        const selector = '//ul[@class="prod_list"]//a[@class="prod_link"]'
+        const loc = this.page.locator(selector)
+        this.logger.debug("possible books lengths : %d", await loc.count())
+
+        const specUrl = (await loc.count()) > 0 ? await loc.first().getAttribute("href") : ""
+        this.logger.debug("selected books url : %s ", specUrl)
+        return specUrl || ""
+    }
+
     async saveHtml() {
         if (this.page.url().startsWith("file://")) return
-        const localFilePath = path.join(this.dataPath, this.scraperName, "html", `${this.isbn}.html`)
+        const localFilePath = path.join(
+            this.dataPath,
+            this.scraperName,
+            "html",
+            `${this.isbn}.html`
+        )
         this.logger.debug({ localFilePath }, "saveHtml")
         await fsAsync.mkdir(path.dirname(localFilePath), { recursive: true })
 
@@ -216,21 +264,22 @@ export class kyoboScraper implements BookScraper {
             return await Bun.write(Bun.file(localFilePath), html)
         }
     }
+
     async extractImageSrc(): Promise<string> {
         const imgXpath = '//div[contains(@class, "portrait_img_box")]/img'
         const loc = this.page.locator(imgXpath)
         const src = ((await loc.count()) && (await loc.first().getAttribute("src"))) || ""
         this.logger.debug({ src }, "Extracted image source")
-
         return src
     }
+
     async saveImage(): Promise<boolean> {
         const src = await this.extractImageSrc()
 
         if (src) {
             const response = await fetch(src)
             const arrayBuffer = await response.arrayBuffer()
-            const bookName = await this.getBookName()
+            const bookName = await this.getTitle()
             const exName = path.extname(src)
 
             const imagePath = path.join(
@@ -245,23 +294,16 @@ export class kyoboScraper implements BookScraper {
         }
         return false
     }
-    async searchBook(searchURL: string): Promise<string> {
-        await this.page.goto(searchURL)
-        await this.page.waitForLoadState("domcontentloaded")
 
-        const selector = '//ul[@class="prod_list"]//a[@class="prod_link"]'
-        const loc = this.page.locator(selector)
-        this.logger.debug("possible books lengths : %d", await loc.count())
-        const specUrl = (await loc.count()) > 0 ? await loc.first().getAttribute("href") : ""
-        this.logger.debug("selected books url : %s ", specUrl)
-        return specUrl || ""
-    }
-    async extractData(): Promise<ScrapData> {
+    // 상세 페이지 내 도서 정보 수집
+    async extractDataFromSpecPage(): Promise<ScrapData> {
         const urlXpath = "meta[property='og:url']"
         const url = await this.page.locator(urlXpath).first().getAttribute("content")
         const toc = await this.getToc()
         const recommendation = await this.getRecommendation()
         const description = await this.getDescription()
+        const tilte = await this.getTitle()
+        const imageUrl = await this.extractImageSrc()
 
         this.logger.debug(
             {
@@ -281,8 +323,12 @@ export class kyoboScraper implements BookScraper {
             description,
             source: this.scraperName,
             url: url || "",
+            imageUrl: imageUrl,
+            author: "", //todo
+            title: tilte,
         }
     }
+    // 추천사 수집
     async getRecommendation(): Promise<string> {
         const recoXpathFirst = '//div[@class="product_detail_area book_publish_review"]'
         const loc = this.page.locator(recoXpathFirst)
@@ -293,17 +339,21 @@ export class kyoboScraper implements BookScraper {
         }
         return ((await loc2?.count()) && (await loc2?.innerText())) || ""
     }
+    // 목차 수집
     async getToc(): Promise<string> {
         const tocXpath = '//li[@class="book_contents_item"]'
         const loc = this.page.locator(tocXpath)
         return ((await loc.count()) && (await loc.innerText())) || ""
     }
+
+    // 소개사 수집
     async getDescription(): Promise<string> {
         const descXpath = '//div[@class="intro_bottom"]'
         const loc = this.page.locator(descXpath)
         return ((await loc.count()) && (await loc.innerText())) || ""
     }
-    async getBookName(): Promise<string> {
+    // 도서명 수집
+    async getTitle(): Promise<string> {
         const bookNameXpath = "//span[@class='prod_title']"
         const bookName = await this.page.locator(bookNameXpath).first().textContent()
         return bookName || ""
