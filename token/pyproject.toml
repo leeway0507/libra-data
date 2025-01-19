@@ -10,6 +10,9 @@ python = "^3.11"
 pandas = "^2.2.3"
 pytest = "^8.3.4"
 tiktoken = "^0.8.0"
+scikit-learn = "^1.6.1"
+fastparquet = "^2024.11.0"
+ipykernel = "^6.29.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
