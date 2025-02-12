@@ -1,14 +1,14 @@
 #!/bin/bash
 
 export GOOSE_DRIVER="postgres"
-export GOOSE_DBSTRING="postgres://postgres:password@localhost:5433/postgres"
+export GOOSE_DBSTRING="postgres://postgres:1q2w3e4r@localhost:5433/library"
 
 # 서버 정보 설정
 REMOTE_USER="ubuntu" # 원격 서버의 사용자 이름
-REMOTE_HOST="152.67.208.135" # 원격 서버의 호스트 이름 또는 IP
+REMOTE_HOST="134.185.119.195" # 원격 서버의 호스트 이름 또는 IP
 REMOTE_PORT="5432" # PostgreSQL 기본 포트
 LOCAL_PORT="5433" # 로컬에서 사용할 포트
-SSH_KEY="~/.key/oracle-24-12-22.key" 
+SSH_KEY="~/.key/postgresql-oracle.key" 
 
 cleanup_port() {
     echo "Checking if port ${LOCAL_PORT} is in use..."
@@ -54,9 +54,9 @@ stop_tunnel() {
 
 # SQL 업데이트
 run_update() {
-    if [ -d "db/migration" ]; then
+    if [ -d "pkg/db/migration" ]; then
         echo "Starting SQL update..."
-        cd db/migration
+        cd pkg/db/migration
         goose up
         goose status
         echo "SQL update completed successfully."

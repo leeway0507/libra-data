@@ -71,8 +71,11 @@ func RequestNaver(query, dir string) {
 	path := filepath.Join(dir, query+".json")
 	uPath := filepath.Join(dir, "U"+query+".json")
 	if utils.CheckFileExist(path) || utils.CheckFileExist(uPath) {
-		log.Printf("query '%s' exists", query)
-		return
+		log.Printf("naver query '%s' exists", query)
+		//temp
+		os.Remove(uPath)
+
+		// return
 	}
 
 	// request naver
